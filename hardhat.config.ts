@@ -24,9 +24,9 @@ const {
 
 // Ensure environment variables
 
-const url = ensureEnvVar(RPC_HTTPS, 'CELO_RPC_URL')
+const url = ensureEnvVar(RPC_HTTPS, 'RPC_HTTPS')
 
-const apiKey = ensureEnvVar(SCAN_API_KEY, 'CELOSCAN_API_KEY')
+const apiKey = ensureEnvVar(SCAN_API_KEY, 'SCAN_API_KEY')
 
 const coinmarketcap = ensureEnvVar(
 	COINMARKETCAP_API_KEY,
@@ -35,7 +35,7 @@ const coinmarketcap = ensureEnvVar(
 
 const enabled = GAS_REPORT === 'true' ? true : false
 
-const walletPrivateKey = ensureEnvVar(WALLET_PRIVATE_KEY, 'PRIVATE_KEY')
+const walletPrivateKey = ensureEnvVar(WALLET_PRIVATE_KEY, 'WALLET_PRIVATE_KEY')
 
 // Set up accounts
 

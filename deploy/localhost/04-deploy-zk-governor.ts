@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 
 import { developmentChains, networkConfig } from '@/config/constants'
-import verify from '@/utils'
+import { verify } from '@/utils/verify'
 
 const deployZkGovernor: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
