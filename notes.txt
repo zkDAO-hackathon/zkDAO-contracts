@@ -1,9 +1,0 @@
-// TODO
-Refactor contract (solady)
-
-TDD:
-  · View fail tests
-
-Doc contract and improve README.
-
-Static testing.
