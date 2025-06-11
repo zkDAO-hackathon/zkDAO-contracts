@@ -1,5 +1,5 @@
 {
-	"name": "inhabit-contracts",
+	"name": "zkdao-contracts",
 	"scripts": {
 		"chain": "hardhat node --tags localhost",
 		"clean": "NODE_ENV=celoAlfajores hardhat clean && rm -rf cache",
@@ -17,6 +17,7 @@
 	},
 	"dependencies": {},
 	"devDependencies": {
+		"@chainlink/contracts": "^1.4.0",
 		"@eslint/eslintrc": "^3.3.1",
 		"@nomicfoundation/hardhat-chai-matchers": "^2.0.9",
 		"@nomicfoundation/hardhat-ethers": "^3.0.9",
