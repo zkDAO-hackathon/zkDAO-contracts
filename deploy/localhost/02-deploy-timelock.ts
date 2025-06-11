@@ -2,9 +2,9 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 
 import { developmentChains, networkConfig } from '@/config/constants'
-import { verify } from '@/utils/verify'
+import verify from '@/utils'
 
-const deployNFTCollection: DeployFunction = async function (
+const deployTimeLock: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
@@ -12,21 +12,28 @@ const deployNFTCollection: DeployFunction = async function (
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
-	log('Deploying NFTCollection and waiting for confirmations...')
+	log('Deploying TimeLock and waiting for confirmations...')
 
-	const nftCollection = await deploy('NFTCollection', {
+	const minDelay: number = 300 // 5 minutes
+	const proposers: string[] = []
+	const executors: string[] = []
+	const admin: string = deployer
+
+	const args = [minDelay, proposers, executors, admin]
+
+	const timeLock = await deploy('TimeLock', {
 		from: deployer,
-		args: [],
+		args,
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`NFTCollection contract at ${nftCollection.address}`)
+	log(`TimeLock at ${timeLock.address}`)
 
 	if (!developmentChains.includes(network.name)) {
-		await verify(nftCollection.address, [])
+		await verify(timeLock.address, args)
 	}
 }
 
-export default deployNFTCollection
-deployNFTCollection.tags = ['celoAlfajores', 'ca-deploy', 'ca-nftCollection']
+export default deployTimeLock
+deployTimeLock.tags = ['all', 'timelock']

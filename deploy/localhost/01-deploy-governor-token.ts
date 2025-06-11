@@ -2,9 +2,9 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 
 import { developmentChains, networkConfig } from '@/config/constants'
-import { verify } from '@/utils/verify'
+import verify from '@/utils'
 
-const deployNFTCollection: DeployFunction = async function (
+const deployGovernorToken: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
@@ -12,21 +12,26 @@ const deployNFTCollection: DeployFunction = async function (
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
-	log('Deploying NFTCollection and waiting for confirmations...')
+	log('Deploying GovernorToken and waiting for confirmations...')
 
-	const nftCollection = await deploy('NFTCollection', {
+	const tokenName: string = 'zkDAO token'
+	const tokenSymbol: string = 'zkDAO'
+
+	const args = [tokenName, tokenSymbol, deployer]
+
+	const governorToken = await deploy('GovernorToken', {
 		from: deployer,
-		args: [],
+		args,
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`NFTCollection contract at ${nftCollection.address}`)
+	log(`GovernorToken contract at ${governorToken.address}`)
 
 	if (!developmentChains.includes(network.name)) {
-		await verify(nftCollection.address, [])
+		await verify(governorToken.address, args)
 	}
 }
 
-export default deployNFTCollection
-deployNFTCollection.tags = ['localhost', 'l-deploy', 'l-nftCollection']
+export default deployGovernorToken
+deployGovernorToken.tags = ['all', 'governor']
