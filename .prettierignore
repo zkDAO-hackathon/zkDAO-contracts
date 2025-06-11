@@ -1,0 +1,27 @@
+# Environment files
+.env
+
+# Build artifacts
+artifacts
+cache
+coverage
+coverage.json
+deployments
+gas-report.txt
+typechain
+typechain-types
+
+# Node modules
+node_modules
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Output or logs
+*.log
+.openzeppelin
+
+# VS Code
+.vscode
