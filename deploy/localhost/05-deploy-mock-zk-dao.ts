@@ -17,7 +17,7 @@ const deployZkDao: DeployFunction = async function (
 	const verifier = await get('HonkVerifier')
 
 	log('----------------------------------------------------')
-	log('Deploying ZKGovernor and waiting for confirmations...')
+	log('Deploying MockZKDAO and waiting for confirmations...')
 
 	const tokenAddress: string = governorToken.address
 	const timeLockAddress: string = timeLock.address
@@ -31,14 +31,14 @@ const deployZkDao: DeployFunction = async function (
 		verifierAddress
 	]
 
-	const zkDao = await deploy('ZKDAO', {
+	const zkDao = await deploy('MockZKDAO', {
 		from: deployer,
 		args,
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`ZKDAO contract at ${zkDao.address}`)
+	log(`MockZKDAO contract at ${zkDao.address}`)
 
 	if (!developmentChains.includes(network.name)) {
 		await verify(verifier.address, args)

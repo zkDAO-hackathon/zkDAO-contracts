@@ -52,9 +52,6 @@ export const executors: string[] = []
 export const admin: string = zeroAddress
 
 export const name: string = 'zkDAO Governor'
-export const tokenAddress: string = zeroAddress
-export const timeLockAddress: string = zeroAddress
-export const verifierAddress: string = zeroAddress
 export const votingDelay: number = 604800 // 1 week
 export const votingPeriod: number = 604800 // 1 week
 export const proposalThreshold: number = 1 // 0 token
