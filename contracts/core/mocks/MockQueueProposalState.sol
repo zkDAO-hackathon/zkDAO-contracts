@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IGovernor} from '../interfaces/IGovernor.sol';
+import {MockConsumer} from './MockConsumer.sol';
 
 import 'hardhat/console.sol';
 
@@ -10,7 +11,7 @@ import 'hardhat/console.sol';
  * @notice Mock implementation of QueueProposalState for local testing
  * @dev Simulates Chainlink Automation behavior without external dependencies
  */
-contract MockQueueProposalState {
+contract MockQueueProposalState is MockConsumer {
 	/// ======================
 	/// ======= Structs ======
 	/// ======================
@@ -164,13 +165,33 @@ contract MockQueueProposalState {
 			(Proposal[])
 		);
 
+		string[] memory serializedProposals = new string[](
+			proposalsToProcess.length
+		);
+
 		for (uint256 i = 0; i < proposalsToProcess.length; i++) {
 			Proposal memory p = proposalsToProcess[i];
+
 			if (!proposals[p.dao][p.proposalId].processed) {
 				proposals[p.dao][p.proposalId].processed = true;
 
-				// TODO: Implement the logic to handle the queued proposals
-				// For now, just mark as processed and emit event
+				// Serializar el proposal a string
+				string memory serialized = string(
+					abi.encodePacked(
+						'dao=',
+						toAsciiString(address(p.dao)),
+						';daoId=',
+						uintToString(p.daoId),
+						';proposalId=',
+						uintToString(p.proposalId),
+						';snapshot=',
+						uintToString(p.snapshot)
+					)
+				);
+
+				console.log(serialized);
+
+				serializedProposals[i] = serialized;
 
 				emit ProposalDequeued(p.proposalId, p.snapshot);
 			}
@@ -399,5 +420,41 @@ contract MockQueueProposalState {
 			lastUpkeepTimestamp,
 			upkeepCounter
 		);
+	}
+
+	function uintToString(uint256 v) internal pure returns (string memory) {
+		if (v == 0) return '0';
+		uint256 digits;
+		uint256 temp = v;
+		while (temp != 0) {
+			digits++;
+			temp /= 10;
+		}
+		bytes memory buffer = new bytes(digits);
+		while (v != 0) {
+			digits -= 1;
+			buffer[digits] = bytes1(uint8(48 + uint256(v % 10)));
+			v /= 10;
+		}
+		return string(buffer);
+	}
+
+	function toAsciiString(address x) internal pure returns (string memory) {
+		bytes memory s = new bytes(42);
+		s[0] = '0';
+		s[1] = 'x';
+		for (uint256 i = 0; i < 20; i++) {
+			bytes1 b = bytes1(uint8(uint(uint160(x)) / (2 ** (8 * (19 - i)))));
+			bytes1 hi = bytes1(uint8(b) / 16);
+			bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+			s[2 * i + 2] = char(hi);
+			s[2 * i + 3] = char(lo);
+		}
+		return string(s);
+	}
+
+	function char(bytes1 b) internal pure returns (bytes1 c) {
+		if (uint8(b) < 10) return bytes1(uint8(b) + 48);
+		else return bytes1(uint8(b) + 87);
 	}
 }

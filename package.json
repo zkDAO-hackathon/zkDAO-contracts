@@ -13,6 +13,7 @@
 		"lint": "eslint",
 		"lint:fix": "eslint --fix",
 		"test": "NODE_ENV=ethereumSepolia hardhat test",
+		"test:localhost": "hardhat test --network localhost",
 		"typechain": "hardhat typechain"
 	},
 	"dependencies": {},

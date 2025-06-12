@@ -9,14 +9,13 @@ import {IGovernorToken} from '../interfaces/IGovernorToken.sol';
 import {ITimeLock} from '../interfaces/ITimeLock.sol';
 import {IVerifier} from '../interfaces/IVerifier.sol';
 import {IGovernor} from '../interfaces/IGovernor.sol';
-import {MockConsumer} from './MockConsumer.sol';
 import {MockQueueProposalState} from './MockQueueProposalState.sol';
 import {Errors} from '../libraries/Errors.sol';
 import {Clone} from '../libraries/Clone.sol';
 
 import 'hardhat/console.sol';
 
-contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer, Errors {
+contract MockZKDAO is IZKDAO, MockQueueProposalState, Errors {
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
