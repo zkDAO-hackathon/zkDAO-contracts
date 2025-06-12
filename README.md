@@ -1,4 +1,4 @@
-# ZKDAO
+# ZKDAO Contracts
 
 by hackathon
 
