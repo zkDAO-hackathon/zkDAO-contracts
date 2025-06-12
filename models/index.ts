@@ -1,3 +1,5 @@
+import { Address } from 'viem'
+
 export interface NetworkConfigInfo {
 	[chainId: string]: {
 		blockConfirmations?: number
@@ -15,4 +17,11 @@ export interface GovernorParams {
 	votingPeriod: bigint
 	proposalThreshold: bigint
 	quorumFraction: bigint
+}
+
+export interface DaoStruct {
+	token: Address
+	timelock: Address
+	governor: Address
+	deployer: Address
 }
