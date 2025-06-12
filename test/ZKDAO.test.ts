@@ -1,6 +1,7 @@
 import chai, { expect } from 'chai'
 import chaiBigint from 'chai-bigint'
 import { log } from 'console'
+import { BytesLike } from 'ethers'
 import hre, { viem } from 'hardhat'
 import { Address, encodeFunctionData } from 'viem'
 
@@ -123,5 +124,30 @@ describe('MockZKDAO', function () {
 		await publicClient.waitForTransactionReceipt({ hash: txHash })
 
 		expect(txHash).to.be.ok
+
+		log('🚩 3) performUpkeep')
+
+		let upkeepNeeded = false
+		let performData: BytesLike = ''
+
+		while (!upkeepNeeded) {
+			await mockZkDao.write.advanceTime([86400n]) //  1 day
+
+			const [upkeepNeededResponse, performDataResponse]: [boolean, BytesLike] =
+				await mockZkDao.read.checkUpkeep([dao.governor])
+
+			upkeepNeeded = upkeepNeededResponse
+			performData = performDataResponse
+		}
+
+		expect(upkeepNeeded).to.equal(true)
+
+		log('🚩 4) performUpkeep')
+
+		const tx = await mockZkDao.write.performUpkeep([performData], {
+			account: deployer
+		})
+
+		await publicClient.waitForTransactionReceipt({ hash: tx })
 	})
 })
