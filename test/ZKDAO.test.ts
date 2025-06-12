@@ -125,7 +125,7 @@ describe('MockZKDAO', function () {
 
 		expect(txHash).to.be.ok
 
-		log('🚩 3) performUpkeep')
+		log('🚩 3) checkUpkeep')
 
 		let upkeepNeeded = false
 		let performData: BytesLike = ''
