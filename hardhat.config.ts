@@ -13,6 +13,7 @@ import { ensureEnvVar } from './utils/ensure-env-var'
 // Load environment variables
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` })
+dotenv.config()
 
 const {
 	COINMARKETCAP_API_KEY,
@@ -85,16 +86,16 @@ const config: HardhatUserConfig = {
 		deployer: {
 			default: 0
 		},
-		luca: {
+		user1: {
 			default: 1
 		},
-		juan: {
+		user2: {
 			default: 2
 		},
-		santiago: {
+		user3: {
 			default: 3
 		},
-		ledger: {
+		user4: {
 			default: 4
 		}
 	},
