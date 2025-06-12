@@ -10,6 +10,12 @@ contract Errors {
 	error UNAUTHORIZED();
 
 	/// ======================
+	/// ======= ZK DAO =======
+	/// ======================
+
+	error DAO_NOT_FOUND(uint256 daoId);
+
+	/// ======================
 	/// ====== Governor ======
 	/// ======================
 
@@ -17,4 +23,9 @@ contract Errors {
 	error INVALID_PROPOSAL_ID();
 	error INVALID_NULLIFIER();
 	error ZK_PROOF_FAILED();
+
+	error InvalidArrayLength();
+	error UnauthorizedCaller();
+	error DAONotFound(uint256 daoId);
+	error InvalidParameters();
 }

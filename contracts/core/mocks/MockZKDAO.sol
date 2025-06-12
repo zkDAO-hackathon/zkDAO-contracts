@@ -11,26 +11,28 @@ import {IVerifier} from '../interfaces/IVerifier.sol';
 import {IGovernor} from '../interfaces/IGovernor.sol';
 import {MockConsumer} from './MockConsumer.sol';
 import {MockQueueProposalState} from './MockQueueProposalState.sol';
+import {Errors} from '../libraries/Errors.sol';
 import {Clone} from '../libraries/Clone.sol';
 
 import 'hardhat/console.sol';
 
-contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
+contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer, Errors {
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
 
 	mapping(address => uint256) private nonces;
 	mapping(uint256 => DAO) private daos;
+	mapping(address => uint256) public daoIds;
 
 	IGovernorToken public governorToken;
 	ITimeLock public timelock;
 	IVerifier public verifier;
 	IGovernor public governor;
 
-	uint256 public daoIdCounter;
+	uint256 public daoCount;
 
-	receive() external payable override {}
+	receive() external payable {}
 
 	/// =========================
 	/// ====== Constructor ======
@@ -48,16 +50,28 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
 		verifier = IVerifier(_verifier);
 	}
 
+	/// =========================
+	/// ======= Modifiers =======
+	/// =========================
+
+	modifier onlyZkDaos() {
+		uint256 daoId = daoIds[msg.sender];
+		if (daoId == 0) {
+			revert DAO_NOT_FOUND(daoId);
+		}
+
+		if (daos[daoId].governor != IGovernor(msg.sender)) {
+			revert UNAUTHORIZED();
+		}
+		_;
+	}
+
 	/// ==========================
 	/// ===== View Functions =====
 	/// ==========================
 
 	function getDao(uint256 id) external view override returns (DAO memory dao) {
 		return daos[id];
-	}
-
-	function getNonce(address account) external view override returns (uint256) {
-		return nonces[account];
 	}
 
 	function getImplementations()
@@ -79,12 +93,8 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
 		);
 	}
 
-	function daoExists(uint256 id) external view override returns (bool) {
-		return daos[id].deployer != address(0);
-	}
-
-	function getTotalDAOs() external view override returns (uint256) {
-		return daoIdCounter;
+	function getNonce(address account) external view override returns (uint256) {
+		return nonces[account];
 	}
 
 	/// =================================
@@ -98,10 +108,10 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
 		address[] calldata _to,
 		uint256[] calldata _amounts
 	) external payable override {
-		if (_to.length != _amounts.length) revert InvalidArrayLength();
+		if (_to.length != _amounts.length) revert MISMATCH();
 
 		uint256 baseNonce = ++nonces[msg.sender];
-		uint256 id = ++daoIdCounter;
+		uint256 id = ++daoCount;
 
 		address tokenClone = Clone.createClone(
 			address(governorToken),
@@ -153,6 +163,7 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
 
 		// Save DAO data
+		daoIds[governorClone] = id;
 		daos[id] = DAO({
 			token: IGovernorToken(tokenClone),
 			timelock: ITimeLock(timelockClone),
@@ -163,40 +174,12 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
 		emit DaoCreated(id, msg.sender, tokenClone, timelockClone, governorClone);
 	}
 
-	function updateImplementations(
-		address _governorToken,
-		address _timelock,
-		address _governor,
-		address _verifier
-	) external override {
-		// TODO: Add access control (onlyOwner modifier)
-		governorToken = IGovernorToken(_governorToken);
-		timelock = ITimeLock(_timelock);
-		governor = IGovernor(_governor);
-		verifier = IVerifier(_verifier);
-	}
-
-	/// =============================
-	/// ===== Override Functions ====
-	/// =============================
-
-	/**
-	 * @notice Override queueProposal to handle multiple inheritance
-	 * @dev This function needs to override both IZKDAO and MockQueueProposalState
-	 */
 	function queueProposal(
 		uint256 daoId,
 		uint256 proposalId,
 		uint256 snapshot
-	) public override(IZKDAO, MockQueueProposalState) {
-		// Validate that the caller is a registered governor
-		if (!this.daoExists(daoId)) revert DAONotFound(daoId);
-
-		DAO memory dao = daos[daoId];
-		if (msg.sender != address(dao.governor)) revert UnauthorizedCaller();
-
-		// Call the parent implementation from MockQueueProposalState
-		queueProposal(daoId, proposalId, snapshot);
+	) external onlyZkDaos {
+		_queueProposal(daoId, proposalId, snapshot);
 	}
 
 	/// =========================
@@ -234,7 +217,6 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
 		GovernorParams calldata governorParams,
 		uint256 id
 	) internal {
-		// Convert calldata struct to memory struct for compatibility
 		IGovernor.GovernorInitParams memory memoryParams = IGovernor
 			.GovernorInitParams({
 				name: governorParams.name,

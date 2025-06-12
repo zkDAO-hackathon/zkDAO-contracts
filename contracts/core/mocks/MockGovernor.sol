@@ -11,15 +11,12 @@ import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 
-import {IGovernorToken} from '../core/interfaces/IGovernorToken.sol';
-import {IVerifier} from '../core/interfaces/IVerifier.sol';
-import {IGovernor} from '../core/interfaces/IGovernor.sol';
-import {IZKDAO} from '../core/interfaces/IZKDAO.sol';
-import {Errors} from '../core/libraries/Errors.sol';
+import {IGovernor} from '../interfaces/IGovernor.sol';
+import {IVerifier} from '../interfaces/IVerifier.sol';
+import {IZKDAO} from '../interfaces/IZKDAO.sol';
+import {Errors} from '../libraries/Errors.sol';
 
-import 'hardhat/console.sol';
-
-contract Governor is
+contract MockGovernor is
 	Initializable,
 	GovernorUpgradeable,
 	GovernorSettingsUpgradeable,
@@ -169,6 +166,9 @@ contract Governor is
 	/// ===== Override Functions ====
 	/// =============================
 
+	/**
+	 * @notice Override propose to integrate with ZKDAO queue system
+	 */
 	function propose(
 		address[] memory targets,
 		uint256[] memory values,
@@ -204,6 +204,7 @@ contract Governor is
 		uint256 snapshot = proposalSnapshot(proposalId);
 
 		zkDao.queueProposal(id, proposalId, snapshot);
+
 		return proposalId;
 	}
 

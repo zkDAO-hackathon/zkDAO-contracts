@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IGovernor} from '../interfaces/IGovernor.sol';
+
+import 'hardhat/console.sol';
+
 /**
  * @title MockQueueProposalState
  * @notice Mock implementation of QueueProposalState for local testing
@@ -12,14 +16,19 @@ contract MockQueueProposalState {
 	/// ======================
 
 	struct Proposal {
-		address dao;
-		uint256 id;
+		IGovernor dao;
+		uint256 daoId;
+		uint256 proposalId;
 		uint256 snapshot;
+		bool processed;
 	}
 
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
+
+	// daoId => proposalId => Proposal
+	mapping(IGovernor => mapping(uint256 => Proposal)) private proposals;
 
 	Proposal[] public queue;
 
@@ -30,7 +39,6 @@ contract MockQueueProposalState {
 	uint256 public upkeepCounter;
 
 	// Mock control variables
-	mapping(uint256 => bool) public processedProposals;
 	bool public forceUpkeepNeeded;
 	uint256 public mockBlockTimestamp;
 
@@ -38,10 +46,26 @@ contract MockQueueProposalState {
 	/// ======= Events =======
 	/// ======================
 
-	event ProposalQueued(uint256 indexed id, uint256 snapshot);
+	event ProposalQueued(
+		address indexed dao,
+		uint256 indexed daoId,
+		uint256 indexed proposalId,
+		uint256 snapshot
+	);
+
 	event ProposalDequeued(uint256 indexed id, uint256 snapshot);
 	event UpkeepPerformed(uint256 indexed upkeepId, uint256 proposalsProcessed);
 	event AutomationToggled(bool enabled);
+
+	/// =========================
+	/// ====== Constructor ======
+	/// =========================
+
+	constructor() {
+		automationEnabled = true;
+		automationRegistry = msg.sender;
+		mockBlockTimestamp = block.timestamp;
+	}
 
 	/// ========================
 	/// ======= Modifiers ======
@@ -53,16 +77,6 @@ contract MockQueueProposalState {
 			'Only automation registry can call this'
 		);
 		_;
-	}
-
-	/// =========================
-	/// ====== Constructor ======
-	/// =========================
-
-	constructor() {
-		automationEnabled = true;
-		automationRegistry = msg.sender;
-		mockBlockTimestamp = block.timestamp;
 	}
 
 	/// ==========================
@@ -87,7 +101,8 @@ contract MockQueueProposalState {
 
 		for (uint256 i = 0; i < queue.length; i++) {
 			if (
-				queue[i].snapshot <= currentTime && !processedProposals[queue[i].id]
+				queue[i].snapshot <= currentTime &&
+				!proposals[queue[i].dao][queue[i].proposalId].processed
 			) {
 				count++;
 			}
@@ -97,19 +112,21 @@ contract MockQueueProposalState {
 			return (false, bytes(''));
 		}
 
-		Proposal[] memory proposals = new Proposal[](count);
+		Proposal[] memory proposalsToPerform = new Proposal[](count);
+
 		uint256 index = 0;
 
 		for (uint256 i = 0; i < queue.length; i++) {
 			if (
-				queue[i].snapshot <= currentTime && !processedProposals[queue[i].id]
+				queue[i].snapshot <= currentTime &&
+				!proposals[queue[i].dao][queue[i].proposalId].processed
 			) {
-				proposals[index] = queue[i];
+				proposalsToPerform[index] = queue[i];
 				index++;
 			}
 		}
 
-		performData = abi.encode(proposals);
+		performData = abi.encode(proposalsToPerform);
 		upkeepNeeded = count > 0;
 	}
 
@@ -117,48 +134,22 @@ contract MockQueueProposalState {
 		return queue.length;
 	}
 
-	function getProposal(uint256 index) external view returns (Proposal memory) {
-		require(index < queue.length, 'Index out of bounds');
-		return queue[index];
+	function getProposal(
+		address dao,
+		uint256 proposalId
+	) external view returns (Proposal memory) {
+		return proposals[IGovernor(dao)][proposalId];
 	}
 
-	function getAllProposals() external view returns (Proposal[] memory) {
+	function qetQueue() external view returns (Proposal[] memory) {
 		return queue;
 	}
 
-	function getPendingProposals() external view returns (Proposal[] memory) {
-		uint256 count = 0;
-		uint256 currentTime = mockBlockTimestamp > 0
-			? mockBlockTimestamp
-			: block.timestamp;
-
-		for (uint256 i = 0; i < queue.length; i++) {
-			if (
-				queue[i].snapshot <= currentTime && !processedProposals[queue[i].id]
-			) {
-				count++;
-			}
-		}
-
-		Proposal[] memory pending = new Proposal[](count);
-		uint256 index = 0;
-
-		for (uint256 i = 0; i < queue.length; i++) {
-			if (
-				queue[i].snapshot <= currentTime && !processedProposals[queue[i].id]
-			) {
-				pending[index] = queue[i];
-				index++;
-			}
-		}
-
-		return pending;
-	}
-
 	function isProposalProcessed(
+		address dao,
 		uint256 proposalId
 	) external view returns (bool) {
-		return processedProposals[proposalId];
+		return proposals[IGovernor(dao)][proposalId].processed;
 	}
 
 	/// =================================
@@ -168,33 +159,45 @@ contract MockQueueProposalState {
 	function performUpkeep(bytes calldata performData) external onlyAutomation {
 		require(automationEnabled, 'Automation is disabled');
 
-		Proposal[] memory proposals = abi.decode(performData, (Proposal[]));
+		Proposal[] memory proposalsToProcess = abi.decode(
+			performData,
+			(Proposal[])
+		);
 
-		for (uint256 i = 0; i < proposals.length; i++) {
-			if (!processedProposals[proposals[i].id]) {
-				processedProposals[proposals[i].id] = true;
+		for (uint256 i = 0; i < proposalsToProcess.length; i++) {
+			Proposal memory p = proposalsToProcess[i];
+			if (!proposals[p.dao][p.proposalId].processed) {
+				proposals[p.dao][p.proposalId].processed = true;
 
 				// TODO: Implement the logic to handle the queued proposals
 				// For now, just mark as processed and emit event
 
-				emit ProposalDequeued(proposals[i].id, proposals[i].snapshot);
+				emit ProposalDequeued(p.proposalId, p.snapshot);
 			}
 		}
 
 		lastUpkeepTimestamp = block.timestamp;
 		upkeepCounter++;
 
-		emit UpkeepPerformed(upkeepCounter, proposals.length);
+		emit UpkeepPerformed(upkeepCounter, proposalsToProcess.length);
 	}
 
-	function queueProposal(
-		uint256 daoId,
-		uint256 proposalId,
-		uint256 snapshot
-	) external virtual {
-		queue.push(Proposal({dao: msg.sender, id: proposalId, snapshot: snapshot}));
+	function _queueProposal(
+		uint256 _daoId,
+		uint256 _proposalId,
+		uint256 _snapshot
+	) internal virtual {
+		queue.push(
+			Proposal({
+				dao: IGovernor(msg.sender),
+				daoId: _daoId,
+				proposalId: _proposalId,
+				snapshot: _snapshot,
+				processed: false
+			})
+		);
 
-		emit ProposalQueued(proposalId, snapshot);
+		emit ProposalQueued(msg.sender, _daoId, _proposalId, _snapshot);
 	}
 
 	/// ================================
@@ -275,7 +278,7 @@ contract MockQueueProposalState {
 	 */
 	function clearProcessedProposals() external {
 		for (uint256 i = 0; i < queue.length; i++) {
-			processedProposals[queue[i].id] = false;
+			proposals[queue[i].dao][queue[i].proposalId].processed = false;
 		}
 	}
 
@@ -294,7 +297,7 @@ contract MockQueueProposalState {
 
 		// Count active proposals
 		for (uint256 i = 0; i < queue.length; i++) {
-			if (!processedProposals[queue[i].id]) {
+			if (!proposals[queue[i].dao][queue[i].proposalId].processed) {
 				activeCount++;
 			}
 		}
@@ -304,7 +307,7 @@ contract MockQueueProposalState {
 		uint256 index = 0;
 
 		for (uint256 i = 0; i < queue.length; i++) {
-			if (!processedProposals[queue[i].id]) {
+			if (!proposals[queue[i].dao][queue[i].proposalId].processed) {
 				activeProposals[index] = queue[i];
 				index++;
 			}
@@ -340,10 +343,20 @@ contract MockQueueProposalState {
 
 		for (uint256 i = 0; i < daos.length; i++) {
 			queue.push(
-				Proposal({dao: daos[i], id: proposalIds[i], snapshot: snapshots[i]})
+				Proposal({
+					dao: IGovernor(daos[i]),
+					daoId: 0, // DAO ID can be set later if needed
+					proposalId: proposalIds[i],
+					snapshot: snapshots[i],
+					processed: false
+				})
 			);
-
-			emit ProposalQueued(proposalIds[i], snapshots[i]);
+			emit ProposalQueued(
+				daos[i],
+				0, // DAO ID can be set later if needed
+				proposalIds[i],
+				snapshots[i]
+			);
 		}
 	}
 
@@ -370,7 +383,7 @@ contract MockQueueProposalState {
 
 		for (uint256 i = 0; i < queue.length; i++) {
 			if (queue[i].snapshot <= currentTime) {
-				if (processedProposals[queue[i].id]) {
+				if (proposals[queue[i].dao][queue[i].proposalId].processed) {
 					processed++;
 				} else {
 					pending++;

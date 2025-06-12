@@ -43,15 +43,6 @@ interface IZKDAO {
 		address governor
 	);
 
-	/// ======================
-	/// ======= Errors =======
-	/// ======================
-
-	error InvalidArrayLength();
-	error UnauthorizedCaller();
-	error DAONotFound(uint256 daoId);
-	error InvalidParameters();
-
 	/// ==========================
 	/// ===== View Functions =====
 	/// ==========================
@@ -62,19 +53,6 @@ interface IZKDAO {
 	 * @return dao DAO struct containing token, timelock, governor, and deployer
 	 */
 	function getDao(uint256 id) external view returns (DAO memory dao);
-
-	/**
-	 * @notice Get the current DAO counter
-	 * @return Current number of DAOs created
-	 */
-	function daoIdCounter() external view returns (uint256);
-
-	/**
-	 * @notice Get user's current nonce for deterministic address generation
-	 * @param account User address
-	 * @return Current nonce value
-	 */
-	function getNonce(address account) external view returns (uint256);
 
 	/**
 	 * @notice Get all implementation contract addresses
@@ -94,17 +72,11 @@ interface IZKDAO {
 		);
 
 	/**
-	 * @notice Check if a DAO exists
-	 * @param id DAO identifier
-	 * @return exists True if DAO exists
+	 * @notice Get user's current nonce for deterministic address generation
+	 * @param account User address
+	 * @return Current nonce value
 	 */
-	function daoExists(uint256 id) external view returns (bool exists);
-
-	/**
-	 * @notice Get total number of DAOs created
-	 * @return total Total DAO count
-	 */
-	function getTotalDAOs() external view returns (uint256 total);
+	function getNonce(address account) external view returns (uint256);
 
 	/// =================================
 	/// == External / Public Functions ==
@@ -140,29 +112,4 @@ interface IZKDAO {
 		uint256 proposalId,
 		uint256 snapshot
 	) external;
-
-	/// =============================
-	/// == Admin / Upgrade Functions ==
-	/// =============================
-
-	/**
-	 * @notice Update implementation contracts (if upgradeable)
-	 * @param _governorToken New governor token implementation
-	 * @param _timelock New timelock implementation
-	 * @param _governor New governor implementation
-	 * @param _verifier New verifier implementation
-	 * @dev Only callable by contract owner/admin
-	 */
-	function updateImplementations(
-		address _governorToken,
-		address _timelock,
-		address _governor,
-		address _verifier
-	) external;
-
-	/**
-	 * @notice Receive function to accept ETH payments
-	 * @dev Used for funding DAO operations and gas fees
-	 */
-	receive() external payable;
 }
