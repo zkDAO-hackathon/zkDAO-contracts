@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IGovernorToken} from './IGovernorToken.sol';
-import {IQueueProposalState} from './IQueueProposalState.sol';
-import {ITimeLock} from './ITimeLock.sol';
+import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
+import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 import {IVerifier} from './IVerifier.sol';
 
 interface IGovernor {
 	/// ======================
 	/// ======= Structs ======
 	/// ======================
+
+	struct GovernorInitParams {
+		string name;
+		IVotes token;
+		TimelockControllerUpgradeable timelock;
+		uint48 votingDelay;
+		uint32 votingPeriod;
+		uint256 proposalThreshold;
+		uint256 votesQuorumFraction;
+		uint256 id;
+	}
 
 	struct PublicInputs {
 		uint256 proposalId;
@@ -19,44 +29,68 @@ interface IGovernor {
 		uint256 nullifier;
 	}
 
+	struct ZKProposalVote {
+		uint256 againstVotes;
+		uint256 forVotes;
+		uint256 abstainVotes;
+		// NOTE: the mapping is not necessary for the current implementation
+		// mapping(uint256 => bool) hasNullified;
+	}
+
+	/// ======================
+	/// ======= Events =======
+	/// ======================
+
+	event ZKVoteCast(
+		uint256 indexed proposalId,
+		uint8 choice,
+		uint256 weight,
+		uint256 nullifier
+	);
+
 	/// =========================
 	/// ====== Initializer ======
 	/// =========================
 
-	/// @notice Initializes the Governor contract.
-	/// @param _name Name of the Governor instance (used for EIP-712 signing).
-	/// @param _token Token used for voting.
-	/// @param _timelock Timelock contract used for executing proposals.
-	/// @param _verifier ZK-proof verifier contract.
-	/// @param _votingDelay Delay before voting starts.
-	/// @param _votingPeriod Duration of the voting period.
-	/// @param _proposalThreshold Minimum number of votes required to create a proposal.
-	/// @param _votesQuorumFraction Fraction of total votes required for quorum.
-	/// @param _id DAO ID.
+	/**
+	 * @notice Initializes the Governor contract
+	 * @param params Struct containing all initialization parameters
+	 * @param _verifier ZK-proof verifier contract
+	 */
 	function initialize(
-		string memory _name,
-		IGovernorToken _token,
-		ITimeLock _timelock,
-		IVerifier _verifier,
-		IQueueProposalState _queueProposalState,
-		uint48 _votingDelay,
-		uint32 _votingPeriod,
-		uint256 _proposalThreshold,
-		uint256 _votesQuorumFraction,
-		uint256 _id
+		GovernorInitParams calldata params,
+		IVerifier _verifier
 	) external;
 
 	/// ==========================
 	/// ===== View Functions =====
 	/// ==========================
 
+	/**
+	 * @notice Check if a nullifier has been used for a proposal
+	 * @param proposalId The proposal ID
+	 * @param nullifier The nullifier to check
+	 * @return True if nullifier has been used
+	 */
 	function getNullifierUsed(
 		uint256 proposalId,
 		uint256 nullifier
 	) external view returns (bool);
 
+	/**
+	 * @notice Get the merkle root for a proposal
+	 * @param proposalId The proposal ID
+	 * @return The merkle root
+	 */
 	function getRoot(uint256 proposalId) external view returns (bytes32);
 
+	/**
+	 * @notice Get ZK voting results for a proposal
+	 * @param proposalId The proposal ID
+	 * @return againstVotes Number of votes against
+	 * @return forVotes Number of votes for
+	 * @return abstainVotes Number of abstain votes
+	 */
 	function getZKVote(
 		uint256 proposalId
 	)
@@ -64,17 +98,60 @@ interface IGovernor {
 		view
 		returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes);
 
+	/**
+	 * @notice Check if a proposal is waiting for merkle root
+	 * @param proposalId The proposal ID
+	 * @return True if waiting for merkle root
+	 */
 	function isWaitingMerkle(uint256 proposalId) external view returns (bool);
+
+	/**
+	 * @notice Get the verifier contract address
+	 * @return The verifier contract
+	 */
+	function verifier() external view returns (IVerifier);
+
+	/**
+	 * @notice Get the DAO ID
+	 * @return The DAO identifier
+	 */
+	function id() external view returns (uint256);
 
 	/// =================================
 	/// == External / Public Functions ==
 	/// =================================
 
+	/**
+	 * @notice Cast a ZK vote on a proposal
+	 * @param _proposalId The proposal ID
+	 * @param _proof The ZK proof
+	 * @param _inputs The public inputs for verification
+	 */
 	function castZKVote(
-		uint256 proposalId,
-		bytes calldata proof,
-		PublicInputs calldata inputs
+		uint256 _proposalId,
+		bytes calldata _proof,
+		PublicInputs calldata _inputs
 	) external;
 
+	/**
+	 * @notice Set the merkle root for a proposal (only callable by ZKDAO)
+	 * @param proposalId The proposal ID
+	 * @param root The merkle root
+	 */
 	function setRoot(uint256 proposalId, bytes32 root) external;
+
+	/**
+	 * @notice Create a new proposal
+	 * @param targets Array of target addresses for proposal calls
+	 * @param values Array of values (in wei) for proposal calls
+	 * @param calldatas Array of call data for proposal calls
+	 * @param description String description of the proposal
+	 * @return proposalId The ID of the created proposal
+	 */
+	function propose(
+		address[] memory targets,
+		uint256[] memory values,
+		bytes[] memory calldatas,
+		string memory description
+	) external returns (uint256 proposalId);
 }

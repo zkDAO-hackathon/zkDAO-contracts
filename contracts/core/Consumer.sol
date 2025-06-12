@@ -5,8 +5,6 @@ import {FunctionsClient} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/Fu
 import {ConfirmedOwner} from '@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol';
 import {FunctionsRequest} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol';
 
-import {IGovernor} from '../core/interfaces/IGovernor.sol';
-
 contract Consumer is FunctionsClient, ConfirmedOwner {
 	using FunctionsRequest for FunctionsRequest.Request;
 
@@ -127,7 +125,7 @@ contract Consumer is FunctionsClient, ConfirmedOwner {
 		);
 
 		// TODO: Implement the logic to handle the response
-		IGovernor(dao).setRoot(proposalId, merkleRoot);
+		// IGovernor(dao).setRoot(proposalId, merkleRoot);
 		emit Response(requestId, s_lastResponse, s_lastError);
 	}
 }

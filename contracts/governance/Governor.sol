@@ -11,9 +11,9 @@ import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 
-import {IConsumer} from '../core/interfaces/IConsumer.sol';
-import {IQueueProposalState} from '../core/interfaces/IQueueProposalState.sol';
+import {IGovernor} from '../core/interfaces/IGovernor.sol';
 import {IVerifier} from '../core/interfaces/IVerifier.sol';
+import {IZKDAO} from '../core/interfaces/IZKDAO.sol';
 import {Errors} from '../core/libraries/Errors.sol';
 
 contract Governor is
@@ -24,45 +24,9 @@ contract Governor is
 	GovernorVotesUpgradeable,
 	GovernorVotesQuorumFractionUpgradeable,
 	GovernorTimelockControlUpgradeable,
+	IGovernor,
 	Errors
 {
-	/// ======================
-	/// ======= Structs ======
-	/// ======================
-
-	struct GovernorInitParams {
-		string name;
-		IVotes token;
-		TimelockControllerUpgradeable timelock;
-		uint48 votingDelay;
-		uint32 votingPeriod;
-		uint256 proposalThreshold;
-		uint256 votesQuorumFraction;
-		uint256 id;
-	}
-
-	struct GovernorExternalRefs {
-		IConsumer consumer;
-		IQueueProposalState queue;
-		IVerifier verifier;
-	}
-
-	struct PublicInputs {
-		uint256 proposalId;
-		uint256 weight;
-		uint8 choice;
-		bytes32 root;
-		uint256 nullifier;
-	}
-
-	struct ZKProposalVote {
-		uint256 againstVotes;
-		uint256 forVotes;
-		uint256 abstainVotes;
-		// NOTE: the mapping is not necessary for the current implementation
-		// mapping(uint256 => bool) hasNullified;
-	}
-
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
@@ -71,22 +35,10 @@ contract Governor is
 	mapping(uint256 => bytes32) private roots;
 	mapping(uint256 => mapping(uint256 => bool)) private nullifierUsed;
 
-	IConsumer public consumer;
-	IQueueProposalState public queueProposalState;
 	IVerifier public verifier;
+	IZKDAO public zkDao;
 
 	uint256 public id;
-
-	/// ======================
-	/// ======= Events =======
-	/// ======================
-
-	event ZKVoteCast(
-		uint256 indexed proposalId,
-		uint8 choice,
-		uint256 weight,
-		uint256 nullifier
-	);
 
 	/// =========================
 	/// ====== Constructor ======
@@ -100,8 +52,8 @@ contract Governor is
 	/// ======= Modifiers =======
 	/// =========================
 
-	modifier onlyConsumer() {
-		if (msg.sender != address(consumer)) revert UNAUTHORIZED();
+	modifier onlyZKDAO() {
+		if (msg.sender != address(zkDao)) revert UNAUTHORIZED();
 		_;
 	}
 
@@ -111,7 +63,7 @@ contract Governor is
 
 	function initialize(
 		GovernorInitParams calldata params,
-		GovernorExternalRefs calldata refs
+		IVerifier _verifier
 	) public initializer {
 		__Governor_init(params.name);
 		__GovernorSettings_init(
@@ -124,8 +76,8 @@ contract Governor is
 		__GovernorVotesQuorumFraction_init(params.votesQuorumFraction);
 		__GovernorTimelockControl_init(params.timelock);
 
-		_setContracts(refs.consumer, refs.queue, refs.verifier);
-
+		verifier = _verifier;
+		zkDao = IZKDAO(payable(msg.sender));
 		id = params.id;
 	}
 
@@ -136,11 +88,13 @@ contract Governor is
 	function getNullifierUsed(
 		uint256 proposalId,
 		uint256 nullifier
-	) external view returns (bool) {
+	) external view override returns (bool) {
 		return nullifierUsed[proposalId][nullifier];
 	}
 
-	function getRoot(uint256 proposalId) external view returns (bytes32) {
+	function getRoot(
+		uint256 proposalId
+	) external view override returns (bytes32) {
 		return roots[proposalId];
 	}
 
@@ -149,13 +103,16 @@ contract Governor is
 	)
 		external
 		view
+		override
 		returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)
 	{
 		ZKProposalVote storage p = zkVotes[proposalId];
 		return (p.againstVotes, p.forVotes, p.abstainVotes);
 	}
 
-	function isWaitingMerkle(uint256 proposalId) public view returns (bool) {
+	function isWaitingMerkle(
+		uint256 proposalId
+	) public view override returns (bool) {
 		return
 			super.state(proposalId) == ProposalState.Pending &&
 			roots[proposalId] == bytes32(0);
@@ -169,7 +126,7 @@ contract Governor is
 		uint256 _proposalId,
 		bytes calldata _proof,
 		PublicInputs calldata _inputs
-	) external {
+	) external override {
 		if (_inputs.choice > 2) revert INVALID_VOTE_TYPE();
 		if (_inputs.proposalId != _proposalId) revert INVALID_PROPOSAL_ID();
 		if (bytes32(_inputs.root) != roots[_proposalId]) revert MISMATCH();
@@ -198,32 +155,26 @@ contract Governor is
 		);
 	}
 
-	function setRoot(uint256 proposalId, bytes32 root) external onlyConsumer {
+	function setRoot(
+		uint256 proposalId,
+		bytes32 root
+	) external override onlyZKDAO {
 		roots[proposalId] = root;
 	}
 
-	/// =========================
-	/// == Internal Functions ===
-	/// =========================
+	/// =============================
+	/// ===== Override Functions ====
+	/// =============================
 
-	function _setContracts(
-		IConsumer _consumer,
-		IQueueProposalState _queueProposalState,
-		IVerifier _verifier
-	) internal {
-		consumer = _consumer;
-		queueProposalState = _queueProposalState;
-		verifier = _verifier;
-	}
-
-	// The following functions are overrides required by Solidity.
-
+	/**
+	 * @notice Override propose to integrate with ZKDAO queue system
+	 */
 	function propose(
 		address[] memory targets,
 		uint256[] memory values,
 		bytes[] memory calldatas,
 		string memory description
-	) public override returns (uint256) {
+	) public override(GovernorUpgradeable, IGovernor) returns (uint256) {
 		address proposer = _msgSender();
 
 		if (!_isValidDescriptionForProposer(proposer, description)) {
@@ -252,11 +203,14 @@ contract Governor is
 
 		uint256 snapshot = proposalSnapshot(proposalId);
 
-		queueProposalState.queueProposal(id, proposalId, snapshot);
+		zkDao.queueProposal(id, proposalId, snapshot);
 
 		return proposalId;
 	}
 
+	/**
+	 * @notice Override _countVote to handle both regular and ZK votes
+	 */
 	function _countVote(
 		uint256 proposalId,
 		address account,
@@ -269,25 +223,30 @@ contract Governor is
 		override(GovernorUpgradeable, GovernorCountingSimpleUpgradeable)
 		returns (uint256)
 	{
-		if (account != address(0)) {
-			return super._countVote(proposalId, account, support, weight, params);
+		// If account is address(0), it's a ZK vote
+		if (account == address(0)) {
+			ZKProposalVote storage p = zkVotes[proposalId];
+
+			if (support == uint8(VoteType.Against)) {
+				p.againstVotes += weight;
+			} else if (support == uint8(VoteType.For)) {
+				p.forVotes += weight;
+			} else if (support == uint8(VoteType.Abstain)) {
+				p.abstainVotes += weight;
+			} else {
+				revert('GovernorVotingSimple: invalid value for enum VoteType');
+			}
+
+			return weight;
 		}
 
-		ZKProposalVote storage p = zkVotes[proposalId];
-
-		if (support == uint8(VoteType.Against)) {
-			p.againstVotes += weight;
-		} else if (support == uint8(VoteType.For)) {
-			p.forVotes += weight;
-		} else if (support == uint8(VoteType.Abstain)) {
-			p.abstainVotes += weight;
-		} else {
-			revert('GovernorVotingSimple: invalid value for enum VoteType');
-		}
-
-		return weight;
+		// Regular vote, delegate to parent
+		return super._countVote(proposalId, account, support, weight, params);
 	}
 
+	/**
+	 * @notice Override state to handle waiting for merkle root
+	 */
 	function state(
 		uint256 proposalId
 	)
@@ -305,16 +264,9 @@ contract Governor is
 		return current;
 	}
 
-	function _execute(
-		uint256 proposalId,
-		address[] memory targets,
-		uint256[] memory values,
-		bytes[] memory calldatas,
-		bytes32 descriptionHash
-	) internal {
-		_execute(proposalId, targets, values, calldatas, descriptionHash);
-	}
-
+	/**
+	 * @notice Override _cancel for timelock integration
+	 */
 	function _cancel(
 		address[] memory targets,
 		uint256[] memory values,
@@ -328,6 +280,9 @@ contract Governor is
 		return super._cancel(targets, values, calldatas, descriptionHash);
 	}
 
+	/**
+	 * @notice Override _executor for timelock integration
+	 */
 	function _executor()
 		internal
 		view
@@ -337,6 +292,9 @@ contract Governor is
 		return super._executor();
 	}
 
+	/**
+	 * @notice Override _queueOperations for timelock integration
+	 */
 	function _queueOperations(
 		uint256 proposalId,
 		address[] memory targets,
@@ -358,6 +316,9 @@ contract Governor is
 			);
 	}
 
+	/**
+	 * @notice Override _executeOperations for timelock integration
+	 */
 	function _executeOperations(
 		uint256 proposalId,
 		address[] memory targets,
@@ -374,6 +335,9 @@ contract Governor is
 		);
 	}
 
+	/**
+	 * @notice Override proposalNeedsQueuing for timelock integration
+	 */
 	function proposalNeedsQueuing(
 		uint256 proposalId
 	)
@@ -385,6 +349,9 @@ contract Governor is
 		return super.proposalNeedsQueuing(proposalId);
 	}
 
+	/**
+	 * @notice Override proposalThreshold for settings integration
+	 */
 	function proposalThreshold()
 		public
 		view
@@ -392,5 +359,97 @@ contract Governor is
 		returns (uint256)
 	{
 		return super.proposalThreshold();
+	}
+
+	/**
+	 * @notice Override supportsInterface for interface detection
+	 */
+	function supportsInterface(
+		bytes4 interfaceId
+	) public view virtual override(GovernorUpgradeable) returns (bool) {
+		return super.supportsInterface(interfaceId);
+	}
+
+	/**
+	 * @notice Override clock for votes integration
+	 */
+	function clock()
+		public
+		view
+		override(GovernorUpgradeable, GovernorVotesUpgradeable)
+		returns (uint48)
+	{
+		return super.clock();
+	}
+
+	/**
+	 * @notice Override CLOCK_MODE for votes integration
+	 */
+	function CLOCK_MODE()
+		public
+		view
+		override(GovernorUpgradeable, GovernorVotesUpgradeable)
+		returns (string memory)
+	{
+		return super.CLOCK_MODE();
+	}
+
+	/**
+	 * @notice Override quorum for quorum fraction integration
+	 */
+	function quorum(
+		uint256 blockNumber
+	)
+		public
+		view
+		override(GovernorUpgradeable, GovernorVotesQuorumFractionUpgradeable)
+		returns (uint256)
+	{
+		return super.quorum(blockNumber);
+	}
+
+	/**
+	 * @notice Override getVotes for votes integration
+	 */
+	function getVotes(
+		address account,
+		uint256 blockNumber
+	) public view override(GovernorUpgradeable) returns (uint256) {
+		return super.getVotes(account, blockNumber);
+	}
+
+	/**
+	 * @notice Override getVotesWithParams for votes integration
+	 */
+	function getVotesWithParams(
+		address account,
+		uint256 blockNumber,
+		bytes memory params
+	) public view override(GovernorUpgradeable) returns (uint256) {
+		return super.getVotesWithParams(account, blockNumber, params);
+	}
+
+	/**
+	 * @notice Override votingDelay for settings integration
+	 */
+	function votingDelay()
+		public
+		view
+		override(GovernorUpgradeable, GovernorSettingsUpgradeable)
+		returns (uint256)
+	{
+		return super.votingDelay();
+	}
+
+	/**
+	 * @notice Override votingPeriod for settings integration
+	 */
+	function votingPeriod()
+		public
+		view
+		override(GovernorUpgradeable, GovernorSettingsUpgradeable)
+		returns (uint256)
+	{
+		return super.votingPeriod();
 	}
 }

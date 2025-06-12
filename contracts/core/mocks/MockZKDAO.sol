@@ -4,40 +4,18 @@ pragma solidity ^0.8.28;
 import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 
-import {IGovernor} from './interfaces/IGovernor.sol';
-import {IGovernorToken} from './interfaces/IGovernorToken.sol';
-import {IQueueProposalState} from './interfaces/IQueueProposalState.sol';
-import {ITimeLock} from './interfaces/ITimeLock.sol';
-import {IVerifier} from './interfaces/IVerifier.sol';
-import {Consumer} from './Consumer.sol';
-import {QueueProposalState} from './QueueProposalState.sol';
-import {Clone} from './libraries/Clone.sol';
+import {IZKDAO} from '../interfaces/IZKDAO.sol';
+import {IGovernorToken} from '../interfaces/IGovernorToken.sol';
+import {ITimeLock} from '../interfaces/ITimeLock.sol';
+import {IVerifier} from '../interfaces/IVerifier.sol';
+import {IGovernor} from '../interfaces/IGovernor.sol';
+import {MockConsumer} from './MockConsumer.sol';
+import {MockQueueProposalState} from './MockQueueProposalState.sol';
+import {Clone} from '../libraries/Clone.sol';
 
-contract ZKDAO is QueueProposalState, Consumer {
-	/// ======================
-	/// ======= Structs ======
-	/// ======================
+import 'hardhat/console.sol';
 
-	struct GovernorTokenParams {
-		string name;
-		string symbol;
-	}
-
-	struct GovernorParams {
-		string name;
-		uint48 votingDelay;
-		uint32 votingPeriod;
-		uint256 proposalThreshold;
-		uint256 quorumFraction;
-	}
-
-	struct DAO {
-		IGovernorToken token;
-		ITimeLock timelock;
-		IGovernor governor;
-		address deployer;
-	}
-
+contract MockZKDAO is IZKDAO, MockQueueProposalState, MockConsumer {
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
@@ -45,33 +23,25 @@ contract ZKDAO is QueueProposalState, Consumer {
 	mapping(address => uint256) private nonces;
 	mapping(uint256 => DAO) private daos;
 
-	uint256 public daoIdCounter;
-
 	IGovernorToken public governorToken;
 	ITimeLock public timelock;
 	IVerifier public verifier;
-	IQueueProposalState public queueProposalState;
 	IGovernor public governor;
 
-	/// ======================
-	/// ======= Events =======
-	/// ======================
+	uint256 public daoIdCounter;
 
-	event DaoCreated(
-		uint256 indexed id,
-		address indexed deployer,
-		address token,
-		address timelock,
-		address governor
-	);
+	receive() external payable override {}
+
+	/// =========================
+	/// ====== Constructor ======
+	/// =========================
 
 	constructor(
 		address _governorToken,
 		address _timelock,
 		address _governor,
-		address _verifier,
-		address _router
-	) Consumer(_router) {
+		address _verifier
+	) {
 		governorToken = IGovernorToken(_governorToken);
 		timelock = ITimeLock(_timelock);
 		governor = IGovernor(_governor);
@@ -82,8 +52,39 @@ contract ZKDAO is QueueProposalState, Consumer {
 	/// ===== View Functions =====
 	/// ==========================
 
-	function getDao(uint256 id) external view returns (DAO memory dao) {
+	function getDao(uint256 id) external view override returns (DAO memory dao) {
 		return daos[id];
+	}
+
+	function getNonce(address account) external view override returns (uint256) {
+		return nonces[account];
+	}
+
+	function getImplementations()
+		external
+		view
+		override
+		returns (
+			address _governorToken,
+			address _timelock,
+			address _governor,
+			address _verifier
+		)
+	{
+		return (
+			address(governorToken),
+			address(timelock),
+			address(governor),
+			address(verifier)
+		);
+	}
+
+	function daoExists(uint256 id) external view override returns (bool) {
+		return daos[id].deployer != address(0);
+	}
+
+	function getTotalDAOs() external view override returns (uint256) {
+		return daoIdCounter;
 	}
 
 	/// =================================
@@ -96,7 +97,9 @@ contract ZKDAO is QueueProposalState, Consumer {
 		GovernorParams calldata _governorParams,
 		address[] calldata _to,
 		uint256[] calldata _amounts
-	) external {
+	) external payable override {
+		if (_to.length != _amounts.length) revert InvalidArrayLength();
+
 		uint256 baseNonce = ++nonces[msg.sender];
 		uint256 id = ++daoIdCounter;
 
@@ -131,7 +134,7 @@ contract ZKDAO is QueueProposalState, Consumer {
 			id
 		);
 
-		// Setup DAO
+		// Setup DAO roles
 		ITimeLock(timelockClone).grantRole(
 			ITimeLock(timelockClone).PROPOSER_ROLE(),
 			governorClone
@@ -145,8 +148,8 @@ contract ZKDAO is QueueProposalState, Consumer {
 			address(this)
 		);
 
-		// TODO: add eth to pay for gas fees
-		IGovernorToken(governorClone).mintBatch(_to, _amounts);
+		// Mint tokens and transfer ownership
+		IGovernorToken(tokenClone).mintBatch(_to, _amounts);
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
 
 		// Save DAO data
@@ -158,6 +161,42 @@ contract ZKDAO is QueueProposalState, Consumer {
 		});
 
 		emit DaoCreated(id, msg.sender, tokenClone, timelockClone, governorClone);
+	}
+
+	function updateImplementations(
+		address _governorToken,
+		address _timelock,
+		address _governor,
+		address _verifier
+	) external override {
+		// TODO: Add access control (onlyOwner modifier)
+		governorToken = IGovernorToken(_governorToken);
+		timelock = ITimeLock(_timelock);
+		governor = IGovernor(_governor);
+		verifier = IVerifier(_verifier);
+	}
+
+	/// =============================
+	/// ===== Override Functions ====
+	/// =============================
+
+	/**
+	 * @notice Override queueProposal to handle multiple inheritance
+	 * @dev This function needs to override both IZKDAO and MockQueueProposalState
+	 */
+	function queueProposal(
+		uint256 daoId,
+		uint256 proposalId,
+		uint256 snapshot
+	) public override(IZKDAO, MockQueueProposalState) {
+		// Validate that the caller is a registered governor
+		if (!this.daoExists(daoId)) revert DAONotFound(daoId);
+
+		DAO memory dao = daos[daoId];
+		if (msg.sender != address(dao.governor)) revert UnauthorizedCaller();
+
+		// Call the parent implementation from MockQueueProposalState
+		queueProposal(daoId, proposalId, snapshot);
 	}
 
 	/// =========================
@@ -210,6 +249,4 @@ contract ZKDAO is QueueProposalState, Consumer {
 
 		IGovernor(_governorClone).initialize(memoryParams, _verifier);
 	}
-
-	receive() external payable {}
 }

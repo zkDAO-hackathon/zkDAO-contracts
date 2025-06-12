@@ -2,17 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {AutomationCompatibleInterface} from '@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol';
-import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-import {IConsumer} from '../core/interfaces/IConsumer.sol';
-import {IZKDAO} from '../core/interfaces/IZKDAO.sol';
 import {Errors} from '../core/libraries/Errors.sol';
 
-contract QueueProposalState is
-	Initializable,
-	AutomationCompatibleInterface,
-	Errors
-{
+contract QueueProposalState is AutomationCompatibleInterface, Errors {
 	/// ======================
 	/// ======= Structs ======
 	/// ======================
@@ -27,8 +20,6 @@ contract QueueProposalState is
 	/// === Storage Variables ===
 	/// =========================
 
-	IConsumer public consumer;
-	IZKDAO public zkdao;
 	Proposal[] public queue;
 
 	/// ======================
@@ -42,28 +33,7 @@ contract QueueProposalState is
 	/// ====== Constructor ======
 	/// =========================
 
-	constructor() {
-		_disableInitializers();
-	}
-
-	/// =========================
-	/// ====== Initializer ======
-	/// =========================
-
-	function initialize(address _queueProposalState) public initializer {
-		consumer = IConsumer(_queueProposalState);
-		zkdao = IZKDAO(_queueProposalState);
-	}
-
-	/// =========================
-	/// ======= Modifiers =======
-	/// =========================
-
-	modifier onlyDAO(uint256 _id) {
-		if (address(zkdao.getDao(_id).governor) != msg.sender)
-			revert UNAUTHORIZED();
-		_;
-	}
+	constructor() {}
 
 	/// ==========================
 	/// ===== View Functions =====
@@ -112,7 +82,6 @@ contract QueueProposalState is
 
 		for (uint256 i = 0; i < proposals.length; i++) {
 			// TODO: Implement the logic to handle the queued proposals
-			// consumer.sendRequest();
 			emit ProposalDequeued(proposals[i].id, proposals[i].snapshot);
 		}
 	}
@@ -121,10 +90,8 @@ contract QueueProposalState is
 		uint256 daoId,
 		uint256 proposalId,
 		uint256 snapshot
-	) external onlyDAO(daoId) {
+	) internal {
 		queue.push(Proposal({dao: msg.sender, id: proposalId, snapshot: snapshot}));
 		emit ProposalQueued(proposalId, snapshot);
 	}
-
-	receive() external payable {}
 }

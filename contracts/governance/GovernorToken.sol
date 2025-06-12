@@ -73,7 +73,7 @@ contract GovernorToken is
 		address[] memory to,
 		uint256[] memory amounts
 	) public onlyOwner {
-		if (to.length == amounts.length) revert MISMATCH();
+		if (to.length != amounts.length) revert MISMATCH();
 
 		for (uint256 i = 0; i < to.length; ) {
 			_mint(to[i], amounts[i]);
