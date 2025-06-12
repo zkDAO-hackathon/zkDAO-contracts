@@ -2,11 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
-import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 import {ITimeLock} from '../core/interfaces/ITimeLock.sol';
 
-contract TimeLock is Initializable, TimelockControllerUpgradeable {
+contract TimeLock is TimelockControllerUpgradeable {
 	/// =========================
 	/// ====== Constructor ======
 	/// =========================
@@ -24,7 +23,7 @@ contract TimeLock is Initializable, TimelockControllerUpgradeable {
 		address[] memory _proposers,
 		address[] memory _executors,
 		address _admin
-	) public override(TimelockControllerUpgradeable) initializer {
+	) public override initializer {
 		__TimelockController_init(_minDelay, _proposers, _executors, _admin);
 	}
 }

@@ -4,7 +4,7 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
 
-const deployGovernorToken: DeployFunction = async function (
+const deployGovernor: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
@@ -12,23 +12,23 @@ const deployGovernorToken: DeployFunction = async function (
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
-	log('Deploying GovernorToken and waiting for confirmations...')
+	log('Deploying Governor and waiting for confirmations...')
 
 	const args: string[] = []
 
-	const governorToken = await deploy('GovernorToken', {
+	const governor = await deploy('Governor', {
 		from: deployer,
 		args,
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`GovernorToken contract at ${governorToken.address}`)
+	log(`Governor contract at ${governor.address}`)
 
 	if (!developmentChains.includes(network.name)) {
-		await verify(governorToken.address, args)
+		await verify(governor.address, args)
 	}
 }
 
-export default deployGovernorToken
-deployGovernorToken.tags = ['localhost', 'l-deploy', 'l-governorToken']
+export default deployGovernor
+deployGovernor.tags = ['localhost', 'l-deploy', 'l-governor']

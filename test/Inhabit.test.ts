@@ -9,7 +9,7 @@ import { AmbassadorStruct } from '@/models/index'
 
 chai.use(chaiBigint)
 
-describe('Inhabit - Groups Module', function () {
+describe('ZKDAO - workflow', function () {
 	let fixture: any
 	let deployer: string
 	let luca: string

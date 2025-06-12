@@ -4,7 +4,7 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
 
-const deployZkGovernor: DeployFunction = async function (
+const deployZkDao: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
@@ -13,44 +13,37 @@ const deployZkGovernor: DeployFunction = async function (
 
 	const governorToken = await get('GovernorToken')
 	const timeLock = await get('TimeLock')
+	const governor = await get('Governor')
 	const verifier = await get('HonkVerifier')
 
 	log('----------------------------------------------------')
 	log('Deploying ZKGovernor and waiting for confirmations...')
 
-	const name: string = 'zkDAO Governor'
 	const tokenAddress: string = governorToken.address
 	const timeLockAddress: string = timeLock.address
+	const governorAddress: string = governor.address
 	const verifierAddress: string = verifier.address
-	const votingDelay: number = 604800 // 1 week
-	const votingPeriod: number = 604800 // 1 week
-	const proposalThreshold: number = 1 // 0 token
-	const votesQuorumFraction: number = 4 // 4% of total supply
 
-	const args = [
-		name,
+	const args: string[] = [
 		tokenAddress,
 		timeLockAddress,
-		verifierAddress,
-		votingDelay,
-		votingPeriod,
-		proposalThreshold,
-		votesQuorumFraction
+		governorAddress,
+		verifierAddress
 	]
 
-	const zkGovernor = await deploy('ZKGovernor', {
+	const zkDao = await deploy('ZKDAO', {
 		from: deployer,
 		args,
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`ZKGovernor at ${zkGovernor.address}`)
+	log(`ZKDAO contract at ${zkDao.address}`)
 
 	if (!developmentChains.includes(network.name)) {
 		await verify(verifier.address, args)
 	}
 }
 
-export default deployZkGovernor
-deployZkGovernor.tags = ['all', 'zkGovernor']
+export default deployZkDao
+deployZkDao.tags = ['localhost', 'l-deploy', 'l-ZKDAO']

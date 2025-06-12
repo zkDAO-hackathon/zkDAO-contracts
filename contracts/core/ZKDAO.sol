@@ -63,15 +63,15 @@ contract ZKDAO {
 	constructor(
 		address _governorToken,
 		address _timelock,
-		address _verifier,
-		address _queueProposalState,
-		address _governor
-	) {
+		address _governor,
+		address _verifier
+	) // address _queueProposalState,
+	{
 		governorToken = IGovernorToken(_governorToken);
 		timelock = ITimeLock(_timelock);
-		verifier = IVerifier(_verifier);
-		queueProposalState = IQueueProposalState(_queueProposalState);
 		governor = IGovernor(_governor);
+		verifier = IVerifier(_verifier);
+		// queueProposalState = IQueueProposalState(_queueProposalState);
 	}
 
 	/// ==========================

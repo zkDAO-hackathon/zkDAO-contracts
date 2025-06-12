@@ -1,4 +1,4 @@
-import { Address } from 'viem'
+import { Address, zeroAddress } from 'viem'
 
 import { NetworkConfigInfo } from '@/models'
 
@@ -9,44 +9,19 @@ export const developmentChains = ['hardhat', 'localhost']
 export const networkConfig: NetworkConfigInfo = {
 	localhost: {},
 	hardhat: {},
-	celo: {
+	ethreumSepolia: {
 		blockConfirmations: 3
 	},
-	celoAlfajores: {
+	avalancheFuji: {
 		blockConfirmations: 3
-	}
-}
-
-// NFT Collections
-
-export const NFT_COLLECTIONS = {
-	caracoli: {
-		metadataUrl:
-			'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafkreiczdctjncnwxrnuuaz66wgv37a4u7ycrqnkt2n73cu4bafdv5z5oa',
-		price: 2000n
-	},
-	jaguar: {
-		metadataUrl:
-			'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafkreih4fccggynla475clgzrj2rs2ulggxvi7lwyavhjcyjeuxjduetoq',
-		price: 5000n
-	},
-	paujil: {
-		metadataUrl:
-			'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafkreig63uzhbc2p3nddkkqtw3ildtgbcc7buoyd6flnz6qyzk2m3beuxe',
-		price: 500n
-	},
-	titi: {
-		metadataUrl:
-			'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafkreihqsoyx6iiqxjp2qughd54xz2gtgddj2ivjgwfqfnitvkkmkmg6au',
-		price: 50n
 	}
 }
 
 export const NATIVE: Address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
-// Celo Mainnet
+// Ethreum Sepolia
 
-// Celo Alfajores
+// Avalanche Fuji
 
 export const TREASURY_ADDRESS: Address =
 	'0xd243438f6d14E2097e96D81e56E08C7D847a67A6'
@@ -65,3 +40,22 @@ export const CELO_ALFAJORES_USDC_ADDRESS: Address =
 
 export const CELO_ALFAJORES_MOCK_NATIVE_USDT_ADDRESS: Address =
 	'0xBba91F588d031469ABCCA566FE80fB1Ad8Ee3287' // 6 by Mento
+
+// Args
+
+export const tokenName: string = 'zkDAO token'
+export const tokenSymbol: string = 'zkDAO'
+
+export const minDelay: number = 300 // 5 minutes
+export const proposers: string[] = []
+export const executors: string[] = []
+export const admin: string = zeroAddress
+
+export const name: string = 'zkDAO Governor'
+export const tokenAddress: string = zeroAddress
+export const timeLockAddress: string = zeroAddress
+export const verifierAddress: string = zeroAddress
+export const votingDelay: number = 604800 // 1 week
+export const votingPeriod: number = 604800 // 1 week
+export const proposalThreshold: number = 1 // 0 token
+export const votesQuorumFraction: number = 4 // 4% of total supply

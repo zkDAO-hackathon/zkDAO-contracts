@@ -14,12 +14,7 @@ const deployTimeLock: DeployFunction = async function (
 	log('----------------------------------------------------')
 	log('Deploying TimeLock and waiting for confirmations...')
 
-	const minDelay: number = 300 // 5 minutes
-	const proposers: string[] = []
-	const executors: string[] = []
-	const admin: string = deployer
-
-	const args = [minDelay, proposers, executors, admin]
+	const args: string[] = []
 
 	const timeLock = await deploy('TimeLock', {
 		from: deployer,
@@ -28,7 +23,7 @@ const deployTimeLock: DeployFunction = async function (
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`TimeLock at ${timeLock.address}`)
+	log(`TimeLock contract at ${timeLock.address}`)
 
 	if (!developmentChains.includes(network.name)) {
 		await verify(timeLock.address, args)
@@ -36,4 +31,4 @@ const deployTimeLock: DeployFunction = async function (
 }
 
 export default deployTimeLock
-deployTimeLock.tags = ['all', 'timelock']
+deployTimeLock.tags = ['localhost', 'l-deploy', 'l-timelock']

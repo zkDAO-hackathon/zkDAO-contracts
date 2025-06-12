@@ -14,19 +14,21 @@ const deployVerifier: DeployFunction = async function (
 	log('----------------------------------------------------')
 	log('Deploying Verifier and waiting for confirmations...')
 
+	const args: string[] = []
+
 	const verifier = await deploy('HonkVerifier', {
 		from: deployer,
-		args: [],
+		args,
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`Verifier at ${verifier.address}`)
+	log(`Verifier contract at ${verifier.address}`)
 
 	if (!developmentChains.includes(network.name)) {
-		await verify(verifier.address, [])
+		await verify(verifier.address, args)
 	}
 }
 
 export default deployVerifier
-deployVerifier.tags = ['all', 'verifier']
+deployVerifier.tags = ['localhost', 'l-deploy', 'l-verifier']
