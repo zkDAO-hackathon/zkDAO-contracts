@@ -110,6 +110,7 @@ interface IZKDAO {
 	function queueProposal(
 		uint256 daoId,
 		uint256 proposalId,
-		uint256 snapshot
+		uint256 snapshot,
+		address voteToken
 	) external;
 }

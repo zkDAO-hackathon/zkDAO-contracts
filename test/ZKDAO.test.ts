@@ -110,18 +110,36 @@ describe('MockZKDAO', function () {
 		const values = [0n]
 		const calldatas = [mintCallData]
 
+		// Delegate votes to user1, user2, and user3
 		const delegateTx = await token.write.delegate([user1], { account: user1 })
 
 		await publicClient.waitForTransactionReceipt({
 			hash: delegateTx
 		})
 
+		await publicClient.waitForTransactionReceipt({ hash: txHash })
+
+		const delegateTx2 = await token.write.delegate([user2], {
+			account: user2
+		})
+
+		await publicClient.waitForTransactionReceipt({
+			hash: delegateTx2
+		})
+
+		const delegateTx3 = await token.write.delegate([user3], {
+			account: user3
+		})
+
+		await publicClient.waitForTransactionReceipt({
+			hash: delegateTx3
+		})
+
+		// Propose transaction
 		const txHash = await governor.write.propose(
 			[targets, values, calldatas, PROPOSAL_DESCRIPTION],
 			{ account: user1 }
 		)
-
-		await publicClient.waitForTransactionReceipt({ hash: txHash })
 
 		expect(txHash).to.be.ok
 
@@ -149,5 +167,7 @@ describe('MockZKDAO', function () {
 		})
 
 		await publicClient.waitForTransactionReceipt({ hash: tx })
+
+		log('voteToken:', dao.token)
 	})
 })

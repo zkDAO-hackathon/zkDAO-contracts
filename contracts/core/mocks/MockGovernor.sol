@@ -203,7 +203,7 @@ contract MockGovernor is
 
 		uint256 snapshot = proposalSnapshot(proposalId);
 
-		zkDao.queueProposal(id, proposalId, snapshot);
+		zkDao.queueProposal(id, proposalId, snapshot, address(token()));
 
 		return proposalId;
 	}

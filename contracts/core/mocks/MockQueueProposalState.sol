@@ -21,6 +21,7 @@ contract MockQueueProposalState is MockConsumer {
 		uint256 daoId;
 		uint256 proposalId;
 		uint256 snapshot;
+		address voteToken;
 		bool processed;
 	}
 
@@ -51,7 +52,8 @@ contract MockQueueProposalState is MockConsumer {
 		address indexed dao,
 		uint256 indexed daoId,
 		uint256 indexed proposalId,
-		uint256 snapshot
+		uint256 snapshot,
+		address voteToken
 	);
 
 	event ProposalDequeued(uint256 indexed id, uint256 snapshot);
@@ -185,7 +187,9 @@ contract MockQueueProposalState is MockConsumer {
 						';proposalId=',
 						uintToString(p.proposalId),
 						';snapshot=',
-						uintToString(p.snapshot)
+						uintToString(p.snapshot),
+						';voteToken=',
+						toAsciiString(p.voteToken)
 					)
 				);
 
@@ -206,7 +210,8 @@ contract MockQueueProposalState is MockConsumer {
 	function _queueProposal(
 		uint256 _daoId,
 		uint256 _proposalId,
-		uint256 _snapshot
+		uint256 _snapshot,
+		address voteToken
 	) internal virtual {
 		queue.push(
 			Proposal({
@@ -214,11 +219,12 @@ contract MockQueueProposalState is MockConsumer {
 				daoId: _daoId,
 				proposalId: _proposalId,
 				snapshot: _snapshot,
+				voteToken: voteToken,
 				processed: false
 			})
 		);
 
-		emit ProposalQueued(msg.sender, _daoId, _proposalId, _snapshot);
+		emit ProposalQueued(msg.sender, _daoId, _proposalId, _snapshot, voteToken);
 	}
 
 	/// ================================
@@ -354,7 +360,8 @@ contract MockQueueProposalState is MockConsumer {
 	function batchQueueProposals(
 		address[] calldata daos,
 		uint256[] calldata proposalIds,
-		uint256[] calldata snapshots
+		uint256[] calldata snapshots,
+		address[] calldata voteTokens
 	) external {
 		require(
 			daos.length == proposalIds.length &&
@@ -369,6 +376,7 @@ contract MockQueueProposalState is MockConsumer {
 					daoId: 0, // DAO ID can be set later if needed
 					proposalId: proposalIds[i],
 					snapshot: snapshots[i],
+					voteToken: voteTokens[i],
 					processed: false
 				})
 			);
@@ -376,7 +384,8 @@ contract MockQueueProposalState is MockConsumer {
 				daos[i],
 				0, // DAO ID can be set later if needed
 				proposalIds[i],
-				snapshots[i]
+				snapshots[i],
+				voteTokens[i]
 			);
 		}
 	}

@@ -5,6 +5,8 @@ import {FunctionsClient} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/Fu
 import {ConfirmedOwner} from '@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol';
 import {FunctionsRequest} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol';
 
+import {IZKDAO} from '../core/interfaces/IZKDAO.sol';
+
 contract Consumer is FunctionsClient, ConfirmedOwner {
 	using FunctionsRequest for FunctionsRequest.Request;
 
@@ -119,13 +121,10 @@ contract Consumer is FunctionsClient, ConfirmedOwner {
 		s_lastResponse = response;
 		s_lastError = err;
 
-		(address dao, uint256 proposalId, bytes32 merkleRoot) = abi.decode(
-			response,
-			(address, uint256, bytes32)
-		);
+		// (string merkleRoots, ) = abi.decode(response, (string, ));
 
-		// TODO: Implement the logic to handle the response
-		// IGovernor(dao).setRoot(proposalId, merkleRoot);
+		// IZKDAO(dao).setRoot(dao, daoId, proposalId, snapshot, voteToken);
+
 		emit Response(requestId, s_lastResponse, s_lastError);
 	}
 }
