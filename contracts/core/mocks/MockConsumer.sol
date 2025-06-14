@@ -1,12 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IGovernor} from '../interfaces/IGovernor.sol';
+
 /**
  * @title MockConsumer
  * @notice Mock implementation of Consumer contract for local testing
  * @dev Simulates Chainlink Functions behavior without external dependencies
  */
 contract MockConsumer {
+	struct Proposal {
+		IGovernor dao;
+		uint256 daoId;
+		uint256 proposalId;
+		uint256 snapshot;
+		address voteToken;
+		bool queued;
+		bool executed;
+	}
+
+	struct SendRequestParams {
+		string source; // JavaScript source code to execute
+		bytes encryptedSecretsUrls; // Encrypted URLs where to fetch user secrets
+		uint8 donHostedSecretsSlotID; // Don hosted secrets slot ID
+		uint64 donHostedSecretsVersion; // Don hosted secrets version
+		string[] args; // List of arguments accessible from within the source code
+		bytes[] bytesArgs; // Array of bytes arguments, represented as hex strings
+		uint64 subscriptionId; // Billing ID
+	}
+
 	/// ======================
 	/// ======= Errors =======
 	/// ======================
@@ -21,8 +43,14 @@ contract MockConsumer {
 	bytes public s_lastResponse;
 	bytes public s_lastError;
 
+	Proposal[] internal queue;
+
 	address public owner;
 	uint256 private requestCounter;
+
+	// daoId => proposalId => Proposal
+	mapping(IGovernor => mapping(uint256 => Proposal)) internal proposals;
+	mapping(bytes32 => Proposal[]) private pendingProposals;
 
 	// Mock storage for simulating responses
 	mapping(bytes32 => bytes) private mockResponses;
@@ -57,27 +85,10 @@ contract MockConsumer {
 	/// == External / Public Functions ==
 	/// =================================
 
-	/**
-	 * @notice Send a simple request (mocked)
-	 * @param source JavaScript source code
-	 * @param encryptedSecretsUrls Encrypted URLs where to fetch user secrets
-	 * @param donHostedSecretsSlotID Don hosted secrets slotId
-	 * @param donHostedSecretsVersion Don hosted secrets version
-	 * @param args List of arguments accessible from within the source code
-	 * @param bytesArgs Array of bytes arguments, represented as hex strings
-	 * @param subscriptionId Billing ID
-	 */
 	function sendRequest(
-		string memory source,
-		bytes memory encryptedSecretsUrls,
-		uint8 donHostedSecretsSlotID,
-		uint64 donHostedSecretsVersion,
-		string[] memory args,
-		bytes[] memory bytesArgs,
-		uint64 subscriptionId,
-		uint32 gasLimit,
-		bytes32 donID
-	) external onlyOwner returns (bytes32 requestId) {
+		SendRequestParams memory params,
+		Proposal[] memory _proposals
+	) internal onlyOwner returns (bytes32 requestId) {
 		// Generate mock request ID
 		requestId = keccak256(
 			abi.encodePacked(
@@ -88,10 +99,25 @@ contract MockConsumer {
 			)
 		);
 
+		for (uint256 i = 0; i < _proposals.length; i++) {
+			pendingProposals[requestId].push(_proposals[i]);
+
+			for (uint256 j = 0; j < queue.length; j++) {
+				if (
+					queue[j].dao == _proposals[i].dao &&
+					queue[j].proposalId == _proposals[i].proposalId
+				) {
+					queue[j] = queue[queue.length - 1];
+					queue.pop();
+					break;
+				}
+			}
+		}
+
 		s_lastRequestId = requestId;
 		pendingRequests[requestId] = true;
 
-		emit RequestSent(requestId, source, args);
+		emit RequestSent(requestId, params.source, params.args);
 
 		return requestId;
 	}
@@ -127,23 +153,19 @@ contract MockConsumer {
 
 	/**
 	 * @notice Mock function to simulate successful response
-	 * @param requestId The request ID to fulfill
-	 * @param dao Address of the DAO
-	 * @param proposalId Proposal ID
-	 * @param merkleRoot Merkle root for the proposal
+	 * @param _requestId The request ID to fulfill
+	 * @param _cids Merkle root for the proposal
 	 */
 	function mockFulfillRequest(
-		bytes32 requestId,
-		address dao,
-		uint256 proposalId,
-		bytes32 merkleRoot
+		bytes32 _requestId,
+		string memory _cids
 	) external {
-		require(pendingRequests[requestId], 'Request not pending');
+		require(pendingRequests[_requestId], 'Request not pending');
 
-		bytes memory response = abi.encode(dao, proposalId, merkleRoot);
+		bytes memory response = abi.encode(_cids);
 		bytes memory err = '';
 
-		fulfillRequest(requestId, response, err);
+		fulfillRequest(_requestId, response, err);
 	}
 
 	/**
@@ -216,15 +238,26 @@ contract MockConsumer {
 		s_lastResponse = response;
 		s_lastError = err;
 
-		// Decode response if not empty (same logic as original)
 		if (response.length > 0) {
-			(address dao, uint256 proposalId, bytes32 merkleRoot) = abi.decode(
-				response,
-				(address, uint256, bytes32)
-			);
+			string memory concatCIDs = abi.decode(response, (string));
 
-			// TODO: Implement the logic to handle the response
-			// IGovernor(dao).setRoot(proposalId, merkleRoot);
+			string[] memory cids = splitByPipe(concatCIDs);
+
+			Proposal[] memory lastProposals = pendingProposals[s_lastRequestId];
+
+			for (uint256 i = 0; i < lastProposals.length; i++) {
+				if (
+					!proposals[lastProposals[i].dao][lastProposals[i].proposalId].executed
+				) {
+					IGovernor(lastProposals[i].dao).setRoot(
+						lastProposals[i].proposalId,
+						cids[i]
+					);
+
+					proposals[lastProposals[i].dao][lastProposals[i].proposalId]
+						.executed = true;
+				}
+			}
 		}
 
 		emit Response(requestId, s_lastResponse, s_lastError);
@@ -253,5 +286,111 @@ contract MockConsumer {
 	 */
 	function transferOwnership(address newOwner) external onlyOwner {
 		owner = newOwner;
+	}
+
+	function _handleProposalRoot(
+		Proposal memory _proposal,
+		bytes32 root
+	) internal {
+		// IGovernor(_proposal.dao).setRoot(p.proposalId, root);
+	}
+
+	function splitByPipe(
+		string memory input
+	) public pure returns (string[] memory) {
+		bytes memory strBytes = bytes(input);
+		uint256 count = 1;
+
+		for (uint256 i = 0; i < strBytes.length; i++) {
+			if (strBytes[i] == '|') count++;
+		}
+
+		string[] memory parts = new string[](count);
+		uint256 lastIndex = 0;
+		uint256 partIndex = 0;
+
+		for (uint256 i = 0; i < strBytes.length; i++) {
+			if (strBytes[i] == '|') {
+				bytes memory part = new bytes(i - lastIndex);
+				for (uint256 j = lastIndex; j < i; j++) {
+					part[j - lastIndex] = strBytes[j];
+				}
+				parts[partIndex++] = string(part);
+				lastIndex = i + 1;
+			}
+		}
+
+		if (lastIndex < strBytes.length) {
+			bytes memory part = new bytes(strBytes.length - lastIndex);
+			for (uint256 j = lastIndex; j < strBytes.length; j++) {
+				part[j - lastIndex] = strBytes[j];
+			}
+			parts[partIndex] = string(part);
+		}
+
+		return parts;
+	}
+
+	function splitRoots(
+		string memory input
+	) internal pure returns (string[] memory) {
+		bytes memory inputBytes = bytes(input);
+		uint256 count = 1;
+
+		for (uint256 i = 0; i < inputBytes.length; i++) {
+			if (inputBytes[i] == 'e') {
+				count++;
+			}
+		}
+
+		string[] memory parts = new string[](count);
+		uint256 lastIndex = 0;
+		uint256 partIndex = 0;
+
+		for (uint256 i = 0; i < inputBytes.length; i++) {
+			if (inputBytes[i] == 'e') {
+				bytes memory part = new bytes(i - lastIndex);
+				for (uint256 j = lastIndex; j < i; j++) {
+					part[j - lastIndex] = inputBytes[j];
+				}
+				parts[partIndex++] = string(part);
+				lastIndex = i + 1;
+			}
+		}
+
+		if (lastIndex < inputBytes.length) {
+			bytes memory part = new bytes(inputBytes.length - lastIndex);
+			for (uint256 j = lastIndex; j < inputBytes.length; j++) {
+				part[j - lastIndex] = inputBytes[j];
+			}
+			parts[partIndex] = string(part);
+		}
+
+		return parts;
+	}
+
+	function convertStringsToBytes32(
+		string[] memory input
+	) internal pure returns (bytes32[] memory) {
+		bytes32[] memory result = new bytes32[](input.length);
+
+		for (uint256 i = 0; i < input.length; i++) {
+			result[i] = toBytes32(input[i]);
+		}
+
+		return result;
+	}
+
+	function toBytes32(
+		string memory source
+	) internal pure returns (bytes32 result) {
+		bytes memory temp = bytes(source);
+		require(temp.length == 66 || temp.length == 64, 'Invalid length'); // with or without "0x"
+
+		uint256 start = (temp[0] == '0' && temp[1] == 'x') ? 2 : 0;
+
+		assembly {
+			result := mload(add(temp, add(32, start)))
+		}
 	}
 }

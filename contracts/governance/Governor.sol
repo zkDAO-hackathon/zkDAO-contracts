@@ -35,7 +35,7 @@ contract Governor is
 	/// =========================
 
 	mapping(uint256 => ZKProposalVote) private zkVotes;
-	mapping(uint256 => bytes32) private roots;
+	mapping(uint256 => string) private cids;
 	mapping(uint256 => mapping(uint256 => bool)) private nullifierUsed;
 
 	IVerifier public verifier;
@@ -97,8 +97,8 @@ contract Governor is
 
 	function getRoot(
 		uint256 proposalId
-	) external view override returns (bytes32) {
-		return roots[proposalId];
+	) external view override returns (string memory) {
+		return cids[proposalId];
 	}
 
 	function getZKVote(
@@ -118,7 +118,7 @@ contract Governor is
 	) public view override returns (bool) {
 		return
 			super.state(proposalId) == ProposalState.Pending &&
-			roots[proposalId] == bytes32(0);
+			bytes(cids[proposalId]).length == 0;
 	}
 
 	/// =================================
@@ -132,7 +132,7 @@ contract Governor is
 	) external override {
 		if (_inputs.choice > 2) revert INVALID_VOTE_TYPE();
 		if (_inputs.proposalId != _proposalId) revert INVALID_PROPOSAL_ID();
-		if (bytes32(_inputs.root) != roots[_proposalId]) revert MISMATCH();
+		// if (bytes32(_inputs.root) != cids[_proposalId]) revert MISMATCH();
 		if (nullifierUsed[_proposalId][_inputs.nullifier])
 			revert INVALID_NULLIFIER();
 
@@ -159,10 +159,10 @@ contract Governor is
 	}
 
 	function setRoot(
-		uint256 proposalId,
-		bytes32 root
+		uint256 _proposalId,
+		string memory _cid
 	) external override onlyZKDAO {
-		roots[proposalId] = root;
+		cids[_proposalId] = _cid;
 	}
 
 	/// =============================

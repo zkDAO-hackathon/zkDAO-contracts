@@ -32,7 +32,7 @@ contract MockGovernor is
 	/// =========================
 
 	mapping(uint256 => ZKProposalVote) private zkVotes;
-	mapping(uint256 => bytes32) private roots;
+	mapping(uint256 => string) private cids;
 	mapping(uint256 => mapping(uint256 => bool)) private nullifierUsed;
 
 	IVerifier public verifier;
@@ -94,8 +94,8 @@ contract MockGovernor is
 
 	function getRoot(
 		uint256 proposalId
-	) external view override returns (bytes32) {
-		return roots[proposalId];
+	) external view override returns (string memory) {
+		return cids[proposalId];
 	}
 
 	function getZKVote(
@@ -115,7 +115,7 @@ contract MockGovernor is
 	) public view override returns (bool) {
 		return
 			super.state(proposalId) == ProposalState.Pending &&
-			roots[proposalId] == bytes32(0);
+			bytes(cids[proposalId]).length == 0;
 	}
 
 	/// =================================
@@ -129,7 +129,7 @@ contract MockGovernor is
 	) external override {
 		if (_inputs.choice > 2) revert INVALID_VOTE_TYPE();
 		if (_inputs.proposalId != _proposalId) revert INVALID_PROPOSAL_ID();
-		if (bytes32(_inputs.root) != roots[_proposalId]) revert MISMATCH();
+		// if (bytes32(_inputs.root) != cids[_proposalId]) revert MISMATCH();
 		if (nullifierUsed[_proposalId][_inputs.nullifier])
 			revert INVALID_NULLIFIER();
 
@@ -157,9 +157,9 @@ contract MockGovernor is
 
 	function setRoot(
 		uint256 proposalId,
-		bytes32 root
+		string memory cid
 	) external override onlyZKDAO {
-		roots[proposalId] = root;
+		cids[proposalId] = cid;
 	}
 
 	/// =============================

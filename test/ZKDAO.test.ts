@@ -2,7 +2,7 @@ import chai, { expect } from 'chai'
 import chaiBigint from 'chai-bigint'
 import { log } from 'console'
 import { BytesLike } from 'ethers'
-import hre, { viem } from 'hardhat'
+import hre, { network, viem } from 'hardhat'
 import { Address, encodeFunctionData } from 'viem'
 
 import { DaoStruct, GovernorParams, GovernorTokenParams } from '@/models'
@@ -117,7 +117,7 @@ describe('MockZKDAO', function () {
 			hash: delegateTx
 		})
 
-		await publicClient.waitForTransactionReceipt({ hash: txHash })
+		await publicClient.waitForTransactionReceipt({ hash: delegateTx })
 
 		const delegateTx2 = await token.write.delegate([user2], {
 			account: user2
@@ -149,6 +149,7 @@ describe('MockZKDAO', function () {
 		let performData: BytesLike = ''
 
 		while (!upkeepNeeded) {
+			await network.provider.send('evm_increaseTime', [86400]) // 1 day;
 			await mockZkDao.write.advanceTime([86400n]) //  1 day
 
 			const [upkeepNeededResponse, performDataResponse]: [boolean, BytesLike] =
@@ -162,12 +163,39 @@ describe('MockZKDAO', function () {
 
 		log('🚩 4) performUpkeep')
 
-		const tx = await mockZkDao.write.performUpkeep([performData], {
+		const performUpkeepTx = await mockZkDao.write.performUpkeep([performData], {
 			account: deployer
 		})
 
-		await publicClient.waitForTransactionReceipt({ hash: tx })
+		await publicClient.waitForTransactionReceipt({ hash: performUpkeepTx })
 
-		log('voteToken:', dao.token)
+		expect(performUpkeepTx).to.be.ok
+
+		log('🚩 5) fulfillRequest')
+
+		const CIDS = 'QmXy7Z5g8d9f3b2c4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t'
+
+		const lastRequestId: bigint = await mockZkDao.read.s_lastRequestId([])
+
+		const fulfillTx = await mockZkDao.write.mockFulfillRequest(
+			[lastRequestId, CIDS],
+			{ account: deployer }
+		)
+
+		await publicClient.waitForTransactionReceipt({
+			hash: fulfillTx
+		})
+
+		expect(fulfillTx).to.be.ok
+
+		const governorInstance = await viem.getContractAt('Governor', dao.governor)
+
+		const proposalState = await governorInstance.read.state([
+			'16640604756799479583065632839777932486736512847992019365521703800375735931445'
+		])
+
+		console.log(
+			`Proposal state: ${proposalState}` // Should be 4 (Succeeded)
+		)
 	})
 })

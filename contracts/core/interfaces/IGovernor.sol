@@ -82,7 +82,7 @@ interface IGovernor {
 	 * @param proposalId The proposal ID
 	 * @return The merkle root
 	 */
-	function getRoot(uint256 proposalId) external view returns (bytes32);
+	function getRoot(uint256 proposalId) external view returns (string memory);
 
 	/**
 	 * @notice Get ZK voting results for a proposal
@@ -135,10 +135,10 @@ interface IGovernor {
 
 	/**
 	 * @notice Set the merkle root for a proposal (only callable by ZKDAO)
-	 * @param proposalId The proposal ID
-	 * @param root The merkle root
+	 * @param _proposalId The proposal ID
+	 * @param _cid The merkle root
 	 */
-	function setRoot(uint256 proposalId, bytes32 root) external;
+	function setRoot(uint256 _proposalId, string memory _cid) external;
 
 	/**
 	 * @notice Create a new proposal

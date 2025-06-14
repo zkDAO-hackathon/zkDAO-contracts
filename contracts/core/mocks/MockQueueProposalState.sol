@@ -12,27 +12,9 @@ import 'hardhat/console.sol';
  * @dev Simulates Chainlink Automation behavior without external dependencies
  */
 contract MockQueueProposalState is MockConsumer {
-	/// ======================
-	/// ======= Structs ======
-	/// ======================
-
-	struct Proposal {
-		IGovernor dao;
-		uint256 daoId;
-		uint256 proposalId;
-		uint256 snapshot;
-		address voteToken;
-		bool processed;
-	}
-
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
-
-	// daoId => proposalId => Proposal
-	mapping(IGovernor => mapping(uint256 => Proposal)) private proposals;
-
-	Proposal[] public queue;
 
 	// Mock automation variables
 	bool public automationEnabled;
@@ -105,7 +87,7 @@ contract MockQueueProposalState is MockConsumer {
 		for (uint256 i = 0; i < queue.length; i++) {
 			if (
 				queue[i].snapshot <= currentTime &&
-				!proposals[queue[i].dao][queue[i].proposalId].processed
+				!proposals[queue[i].dao][queue[i].proposalId].queued
 			) {
 				count++;
 			}
@@ -120,9 +102,14 @@ contract MockQueueProposalState is MockConsumer {
 		uint256 index = 0;
 
 		for (uint256 i = 0; i < queue.length; i++) {
+			console.log(
+				'Checking proposal %s at snapshot %s',
+				queue[i].proposalId,
+				queue[i].snapshot
+			);
 			if (
 				queue[i].snapshot <= currentTime &&
-				!proposals[queue[i].dao][queue[i].proposalId].processed
+				!proposals[queue[i].dao][queue[i].proposalId].queued
 			) {
 				proposalsToPerform[index] = queue[i];
 				index++;
@@ -152,7 +139,7 @@ contract MockQueueProposalState is MockConsumer {
 		address dao,
 		uint256 proposalId
 	) external view returns (bool) {
-		return proposals[IGovernor(dao)][proposalId].processed;
+		return proposals[IGovernor(dao)][proposalId].queued;
 	}
 
 	/// =================================
@@ -167,18 +154,16 @@ contract MockQueueProposalState is MockConsumer {
 			(Proposal[])
 		);
 
-		string[] memory serializedProposals = new string[](
-			proposalsToProcess.length
-		);
+		string[] memory args = new string[](proposalsToProcess.length);
 
 		for (uint256 i = 0; i < proposalsToProcess.length; i++) {
 			Proposal memory p = proposalsToProcess[i];
+			string memory serialized;
 
-			if (!proposals[p.dao][p.proposalId].processed) {
-				proposals[p.dao][p.proposalId].processed = true;
+			if (!proposals[p.dao][p.proposalId].queued) {
+				proposals[p.dao][p.proposalId].queued = true;
 
-				// Serializar el proposal a string
-				string memory serialized = string(
+				serialized = string(
 					abi.encodePacked(
 						'dao=',
 						toAsciiString(address(p.dao)),
@@ -193,12 +178,23 @@ contract MockQueueProposalState is MockConsumer {
 					)
 				);
 
-				console.log(serialized);
-
-				serializedProposals[i] = serialized;
+				args[i] = serialized;
 
 				emit ProposalDequeued(p.proposalId, p.snapshot);
 			}
+
+			sendRequest(
+				SendRequestParams({
+					source: 'queueProposal',
+					encryptedSecretsUrls: bytes(''), // No secrets in this mock
+					donHostedSecretsSlotID: 0, // No DON secrets in this mock
+					donHostedSecretsVersion: 0, // No DON secrets in this mock
+					args: args,
+					bytesArgs: new bytes[](0), // No bytes args in this mock
+					subscriptionId: 0 // No subscription in this mock
+				}),
+				proposalsToProcess
+			);
 		}
 
 		lastUpkeepTimestamp = block.timestamp;
@@ -220,7 +216,8 @@ contract MockQueueProposalState is MockConsumer {
 				proposalId: _proposalId,
 				snapshot: _snapshot,
 				voteToken: voteToken,
-				processed: false
+				queued: false,
+				executed: false
 			})
 		);
 
@@ -305,7 +302,7 @@ contract MockQueueProposalState is MockConsumer {
 	 */
 	function clearProcessedProposals() external {
 		for (uint256 i = 0; i < queue.length; i++) {
-			proposals[queue[i].dao][queue[i].proposalId].processed = false;
+			proposals[queue[i].dao][queue[i].proposalId].queued = false;
 		}
 	}
 
@@ -324,7 +321,7 @@ contract MockQueueProposalState is MockConsumer {
 
 		// Count active proposals
 		for (uint256 i = 0; i < queue.length; i++) {
-			if (!proposals[queue[i].dao][queue[i].proposalId].processed) {
+			if (!proposals[queue[i].dao][queue[i].proposalId].queued) {
 				activeCount++;
 			}
 		}
@@ -334,7 +331,7 @@ contract MockQueueProposalState is MockConsumer {
 		uint256 index = 0;
 
 		for (uint256 i = 0; i < queue.length; i++) {
-			if (!proposals[queue[i].dao][queue[i].proposalId].processed) {
+			if (!proposals[queue[i].dao][queue[i].proposalId].queued) {
 				activeProposals[index] = queue[i];
 				index++;
 			}
@@ -377,7 +374,8 @@ contract MockQueueProposalState is MockConsumer {
 					proposalId: proposalIds[i],
 					snapshot: snapshots[i],
 					voteToken: voteTokens[i],
-					processed: false
+					queued: false,
+					executed: false
 				})
 			);
 			emit ProposalQueued(
@@ -413,7 +411,7 @@ contract MockQueueProposalState is MockConsumer {
 
 		for (uint256 i = 0; i < queue.length; i++) {
 			if (queue[i].snapshot <= currentTime) {
-				if (proposals[queue[i].dao][queue[i].proposalId].processed) {
+				if (proposals[queue[i].dao][queue[i].proposalId].queued) {
 					processed++;
 				} else {
 					pending++;
