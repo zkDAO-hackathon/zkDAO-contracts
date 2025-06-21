@@ -52,6 +52,40 @@ export class MerkleProofAPIClient {
 			)
 		}
 	}
+
+	async generateMerkleTrees(proposals: string[]): Promise<{ cids: string }> {
+		const url = 'http://localhost:3000/merkle-tree/generate-merkle-trees'
+		console.log(`🌐 Generating Merkle trees at: ${url}`)
+
+		try {
+			const response = await axios.post<{ cids: string }>(url, {
+				proposals
+			})
+
+			const data = response.data
+
+			return data
+		} catch (error) {
+			console.error('❌ Failed to generate Merkle trees:', error)
+
+			if (axios.isAxiosError(error)) {
+				const axiosError = error as AxiosError
+				if (axiosError.response) {
+					throw new Error(
+						`HTTP ${axiosError.response.status}: ${axiosError.response.statusText}`
+					)
+				} else if (axiosError.request) {
+					throw new Error('No response received from server')
+				} else {
+					throw new Error(`Request setup error: ${axiosError.message}`)
+				}
+			}
+
+			throw new Error(
+				`Failed to generate Merkle trees: ${(error as Error).message}`
+			)
+		}
+	}
 }
 
 // Default export for easy importing

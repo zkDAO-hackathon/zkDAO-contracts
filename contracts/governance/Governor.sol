@@ -137,7 +137,7 @@ contract Governor is
 
 		_countVote(_proposalId, address(0), uint8(choice), weight, '');
 
-		emit ZKVoteCast(_proposalId, 1, 1000, 1);
+		emit ZKVoteCast(_proposalId, uint8(choice), weight, _inputs[0]);
 	}
 
 	function setRoot(
@@ -150,6 +150,60 @@ contract Governor is
 	/// =============================
 	/// ===== Override Functions ====
 	/// =============================
+
+	/// @dev quorum = forVotes+abstainVotes (normales) + ZK
+	function _quorumReached(
+		uint256 proposalId
+	)
+		internal
+		view
+		override(GovernorUpgradeable, GovernorCountingSimpleUpgradeable)
+		returns (bool)
+	{
+		// votos registrados por la lógica OZ
+		bool quorumNormal = super._quorumReached(proposalId);
+
+		// votos ZK
+		ZKProposalVote storage p = zkVotes[proposalId];
+		uint256 forZK = p.forVotes;
+		uint256 abstainZK = p.abstainVotes;
+		uint256 extra = forZK + abstainZK;
+
+		if (extra == 0) return quorumNormal; // atajo barato
+
+		uint256 required = quorum(proposalSnapshot(proposalId));
+
+		// lee el total “normal” usando la vista pública
+		(
+			uint256 againstNormal,
+			uint256 forNormal,
+			uint256 abstainNormal
+		) = proposalVotes(proposalId); // usa OZ GovernorCountingSimple's public getter
+
+		return (forNormal + abstainNormal + extra) >= required;
+	}
+
+	/// @dev mayoría = forVotes (normales + ZK) > againstVotes (normales + ZK)
+	function _voteSucceeded(
+		uint256 proposalId
+	)
+		internal
+		view
+		override(GovernorUpgradeable, GovernorCountingSimpleUpgradeable)
+		returns (bool)
+	{
+		(
+			uint256 againstNormal,
+			uint256 forNormal /* abstainNormal */,
+
+		) = proposalVotes(proposalId);
+
+		ZKProposalVote storage p = zkVotes[proposalId];
+		uint256 againstZK = p.againstVotes;
+		uint256 forZK = p.forVotes;
+
+		return (forNormal + forZK) > (againstNormal + againstZK);
+	}
 
 	function propose(
 		address[] memory targets,
@@ -182,6 +236,10 @@ contract Governor is
 			description,
 			proposer
 		);
+
+		console.log(' Proposal created with ID:', proposalId);
+		console.log(' Snapshot block:', proposalSnapshot(proposalId));
+		console.log(' Description:', description);
 
 		uint256 snapshot = proposalSnapshot(proposalId);
 
@@ -217,6 +275,17 @@ contract Governor is
 			} else {
 				revert('GovernorVotingSimple: invalid value for enum VoteType');
 			}
+
+			console.log(
+				'ZK Vote counted for proposal %s: %s votes %s',
+				proposalId,
+				weight,
+				support == uint8(VoteType.Against)
+					? 'Against'
+					: support == uint8(VoteType.For)
+					? 'For'
+					: 'Abstain'
+			);
 
 			return weight;
 		}

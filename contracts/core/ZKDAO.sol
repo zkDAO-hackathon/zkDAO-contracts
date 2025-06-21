@@ -13,6 +13,8 @@ import {Consumer} from './Consumer.sol';
 import {QueueProposalState} from './QueueProposalState.sol';
 import {Clone} from './libraries/Clone.sol';
 
+import 'hardhat/console.sol';
+
 contract ZKDAO is QueueProposalState, Consumer {
 	/// ======================
 	/// ======= Structs ======
@@ -148,6 +150,8 @@ contract ZKDAO is QueueProposalState, Consumer {
 		// TODO: add eth to pay for gas fees
 		IGovernorToken(governorClone).mintBatch(_to, _amounts);
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
+
+		console.log('Creating DAO with ID:', id);
 
 		// Save DAO data
 		daos[id] = DAO({

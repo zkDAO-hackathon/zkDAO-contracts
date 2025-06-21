@@ -45,7 +45,7 @@ interface IGovernor {
 		uint256 indexed proposalId,
 		uint8 choice,
 		uint256 weight,
-		uint256 nullifier
+		bytes32 nullifier
 	);
 
 	/// =========================

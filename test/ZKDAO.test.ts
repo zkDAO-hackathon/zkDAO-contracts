@@ -2,9 +2,7 @@ import chai, { expect } from 'chai'
 import chaiBigint from 'chai-bigint'
 import { log } from 'console'
 import { BytesLike } from 'ethers'
-import { writeFileSync } from 'fs'
 import hre, { network, viem } from 'hardhat'
-import { join } from 'path'
 import {
 	Address,
 	encodeFunctionData,
@@ -86,22 +84,31 @@ describe('MockZKDAO', function () {
 
 		const AMOUNTS = [1000n, 1000n, 1000n] // Amounts of tokens to be allocated to each member
 
+		const publicClient = await hre.viem.getPublicClient()
+
+		// 🚩 1) Create DAO
 		const createDaoTx = await mockZkDao.write.createDao(
 			[GOVERNOR_TOKEN_PARAMS, MIN_DELAY, GOVERNOR_PARAMS, TO, AMOUNTS],
 			{ account: user1 }
 		)
 
-		const publicClient = await hre.viem.getPublicClient()
-
-		await publicClient.waitForTransactionReceipt({
+		const createDaoReceipt = await publicClient.getTransactionReceipt({
 			hash: createDaoTx
 		})
 
-		expect(createDaoTx).to.be.ok
+		const DAO_CREATED_TOPIC = keccak256(
+			toBytes('DaoCreated(uint256,address,address,address,address)')
+		)
+
+		const daoCreatedLog = createDaoReceipt.logs.find(
+			log => log.topics[0] === DAO_CREATED_TOPIC
+		)
+
+		if (!daoCreatedLog) throw new Error('DaoCreated log not found')
+
+		const DAO_ID = BigInt(daoCreatedLog.topics[1])
 
 		log('🚩 2) propose')
-
-		const DAO_ID = 1n
 
 		const PROPOSAL_DESCRIPTION =
 			'Add new members and give them 1000 tokens each'
@@ -146,13 +153,12 @@ describe('MockZKDAO', function () {
 			hash: delegateTx3
 		})
 
-		// Propose transaction
-		const txHash = await governor.write.propose(
+		const proposetx = await governor.write.propose(
 			[targets, values, calldatas, PROPOSAL_DESCRIPTION],
 			{ account: user1 }
 		)
 
-		expect(txHash).to.be.ok
+		expect(proposetx).to.be.ok
 
 		log('🚩 3) checkUpkeep')
 
@@ -182,14 +188,68 @@ describe('MockZKDAO', function () {
 
 		expect(performUpkeepTx).to.be.ok
 
-		log('🚩 5) fulfillRequest')
+		log('🚩 4.5) Generate Merkle Tree')
 
-		const CIDS = 'QmXy7Z5g8d9f3b2c4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t'
+		const merkleProofAPI = new MerkleProofAPIClient()
+
+		const descriptionHash = keccak256(toBytes(PROPOSAL_DESCRIPTION))
+
+		const currentBlock = await publicClient.getBlockNumber()
+		const proposalReceipt = await publicClient.getTransactionReceipt({
+			hash: proposetx
+		})
+
+		let actualProposalId: string | null = null
+
+		for (const log of proposalReceipt.logs) {
+			try {
+				const decodedLog = await publicClient.parseLogs({
+					abi: governor.abi,
+					logs: [log]
+				})
+
+				if (
+					decodedLog.length > 0 &&
+					decodedLog[0].eventName === 'ProposalCreated'
+				) {
+					actualProposalId = decodedLog[0].args.proposalId.toString()
+					break
+				}
+			} catch (error) {
+				continue
+			}
+		}
+
+		if (!actualProposalId) {
+			try {
+				actualProposalId = (await governor.read.hashProposal([
+					targets,
+					values,
+					calldatas,
+					descriptionHash
+				])) as string
+				actualProposalId = actualProposalId.toString()
+			} catch (error) {
+				throw new Error('Proposal ID not found in logs or hashProposal')
+			}
+		}
+
+		const merkleTreeParams = [
+			`dao=${dao.governor}`,
+			`daoId=${DAO_ID}`,
+			`proposalId=${actualProposalId}`,
+			`snapshot=${currentBlock}`,
+			`voteToken=${dao.token}`
+		].join(';')
+
+		const cids = await merkleProofAPI.generateMerkleTrees([merkleTreeParams])
+
+		log('🚩 5) fulfillRequest')
 
 		const lastRequestId: bigint = await mockZkDao.read.s_lastRequestId([])
 
 		const fulfillTx = await mockZkDao.write.mockFulfillRequest(
-			[lastRequestId, CIDS],
+			[lastRequestId, cids],
 			{ account: deployer }
 		)
 
@@ -199,10 +259,7 @@ describe('MockZKDAO', function () {
 
 		expect(fulfillTx).to.be.ok
 
-		log('🚩 6) Generate Merkle Tree')
-
-		const PROPOSAL_ID =
-			'77686418805218504844630927999738149327922282530270400939681458713272348495808' // Assuming the proposal ID is 1
+		log('🚩 6) Get Merkle Tree')
 
 		const hashedMessage = keccak256(toBytes('Vote for proposal 1'))
 
@@ -235,10 +292,9 @@ describe('MockZKDAO', function () {
 			_hashed_message: hexToByteArray(hashedMessage.slice(2))
 		}
 
-		const merkleProofAPI = new MerkleProofAPIClient()
 		const merkleProof = await merkleProofAPI.getMerkleProof(
 			dao.governor,
-			PROPOSAL_ID,
+			actualProposalId,
 			user2
 		)
 
@@ -246,7 +302,7 @@ describe('MockZKDAO', function () {
 
 		const circuitAPIClient = new CircuitAPIClient()
 		const zkproof = await circuitAPIClient.generateZKProof({
-			_proposalId: PROPOSAL_ID,
+			_proposalId: actualProposalId,
 			_secret: merkleProof.secret,
 			_voter: getAddress(user2),
 			_weight: merkleProof.weight.toString(),
@@ -258,33 +314,91 @@ describe('MockZKDAO', function () {
 			...ECDSA
 		})
 
-		// 🎯 SAVE DATA FOR REMIX TESTING
-		const remixTestData = {
-			contractCall: {
-				merkleProof,
-				ecdsa: ECDSA,
-				zkProof: {
-					proofBytes: zkproof.proofBytes,
-					publicInputs: zkproof.publicInputs,
-					proofLength: zkproof.proofBytes.length
-				}
-			}
-		}
+		// // 🎯 SAVE DATA FOR REMIX TESTING
+		// const remixTestData = {
+		// 	contractCall: {
+		// 		merkleProof,
+		// 		ecdsa: ECDSA,
+		// 		zkProof: {
+		// 			proofBytes: zkproof.proofBytes,
+		// 			publicInputs: zkproof.publicInputs,
+		// 			proofLength: zkproof.proofBytes.length
+		// 		}
+		// 	}
+		// }
 
-		// Save to JSON file
-		const outputPath = join(process.cwd(), 'remix-test-data.json')
-		writeFileSync(outputPath, JSON.stringify(remixTestData, null, 2))
+		// // Save to JSON file
+		// const outputPath = join(process.cwd(), 'remix-test-data.json')
+		// writeFileSync(outputPath, JSON.stringify(remixTestData, null, 2))
 
 		log('🚩 8) castZKVote')
 		const castZKVoteTx = await governor.write.castZKVote(
-			[PROPOSAL_ID, zkproof.proofBytes, zkproof.publicInputs],
+			[actualProposalId, zkproof.proofBytes, zkproof.publicInputs],
 			{ account: user2 }
 		)
 
-		await publicClient.waitForTransactionReceipt({
+		await publicClient.getTransactionReceipt({
 			hash: castZKVoteTx
 		})
 
 		expect(castZKVoteTx).to.be.ok
+
+		log('🚩 8.5) Advance time to end voting period')
+
+		const votingPeriodSeconds = Number(GOVERNOR_PARAMS.votingPeriod)
+
+		const snapshot = await governor.read.proposalSnapshot([actualProposalId])
+		const nextTime = Number(snapshot) + votingPeriodSeconds + 1
+
+		await network.provider.send('evm_setNextBlockTimestamp', [nextTime])
+		await network.provider.send('evm_mine', [])
+
+		await mockZkDao.write.advanceTime([BigInt(votingPeriodSeconds + 1)])
+
+		const proposalState = await governor.read.state([actualProposalId])
+		log('Proposal state after voting period:', proposalState)
+
+		log('🚩 9) Queue proposal')
+
+		await governor.write.queue([targets, values, calldatas, descriptionHash], {
+			account: user1
+		})
+
+		const proposalStateQueued = await governor.read.state([actualProposalId])
+		expect(proposalStateQueued).to.equal(5)
+		log('Proposal state after queue:', proposalStateQueued)
+
+		log('🚩 9) Advance time to end delay perioriod')
+
+		const MIN_DELAY_SECONDS = MIN_DELAY
+		await network.provider.send('evm_increaseTime', [MIN_DELAY_SECONDS + 1])
+		await network.provider.send('evm_mine', [])
+		await mockZkDao.write.advanceTime([BigInt(MIN_DELAY_SECONDS + 1)])
+
+		const proposalStateAfterDelay = await governor.read.state([
+			actualProposalId
+		])
+		expect(proposalStateAfterDelay).to.equal(5)
+		log('Proposal state after delay period:', proposalStateAfterDelay)
+
+		log('🚩 10) Advance time to allow execution')
+		await network.provider.send('evm_increaseTime', [MIN_DELAY + 1])
+		await network.provider.send('evm_mine', [])
+
+		await mockZkDao.write.advanceTime([BigInt(MIN_DELAY + 1)])
+
+		log('🚩 11) Execute proposal')
+		const executeTx = await governor.write.execute(
+			[targets, values, calldatas, descriptionHash],
+			{ account: user1 }
+		)
+		await publicClient.waitForTransactionReceipt({ hash: executeTx })
+
+		expect(executeTx).to.be.ok
+
+		expect(await token.read.balanceOf([user4])).to.equal(
+			1000n,
+			'User4 should have 1000 tokens after execution'
+		)
 	})
 })
