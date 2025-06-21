@@ -18,8 +18,12 @@
 	},
 	"dependencies": {},
 	"devDependencies": {
+		"@aztec/bb.js": "^0.87.8",
 		"@chainlink/contracts": "^1.4.0",
 		"@eslint/eslintrc": "^3.3.1",
+		"@noir-lang/acvm_js": "^1.0.0-beta.7",
+		"@noir-lang/noir_js": "^1.0.0-beta.7",
+		"@noir-lang/noirc_abi": "^1.0.0-beta.7",
 		"@nomicfoundation/hardhat-chai-matchers": "^2.0.9",
 		"@nomicfoundation/hardhat-ethers": "^3.0.9",
 		"@nomicfoundation/hardhat-ignition": "^0.15.11",
@@ -38,14 +42,14 @@
 		"@typechain/hardhat": "^9.1.0",
 		"chai-bigint": "^0.2.0",
 		"dotenv": "^16.5.0",
-		"eslint": "^9.28.0",
+		"eslint": "^9.29.0",
 		"eslint-config-prettier": "^10.1.5",
 		"eslint-plugin-prettier": "^5.4.1",
 		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"eslint-plugin-unused-imports": "^4.1.4",
-		"ethers": "^6.14.3",
-		"hardhat": "^2.24.2",
-		"hardhat-deploy": "^1.0.2",
+		"ethers": "^6.14.4",
+		"hardhat": "^2.24.3",
+		"hardhat-deploy": "^1.0.3",
 		"hardhat-gas-reporter": "^2.3.0",
 		"prettier": "^3.5.3",
 		"prettier-plugin-solidity": "^2.0.0",
@@ -54,7 +58,7 @@
 		"solhint-plugin-prettier": "^0.1.0",
 		"solidity-coverage": "^0.8.16",
 		"tsconfig-paths": "^4.2.0",
-		"typescript-eslint": "^8.34.0",
-		"viem": "^2.31.0"
+		"typescript-eslint": "^8.34.1",
+		"viem": "^2.31.3"
 	}
 }

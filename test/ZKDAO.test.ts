@@ -2,9 +2,20 @@ import chai, { expect } from 'chai'
 import chaiBigint from 'chai-bigint'
 import { log } from 'console'
 import { BytesLike } from 'ethers'
+import { writeFileSync } from 'fs'
 import hre, { network, viem } from 'hardhat'
-import { Address, encodeFunctionData } from 'viem'
+import { join } from 'path'
+import {
+	Address,
+	encodeFunctionData,
+	getAddress,
+	keccak256,
+	recoverPublicKey,
+	toBytes
+} from 'viem'
 
+import { CircuitAPIClient } from '@/api/circuit-proof'
+import { MerkleProofAPIClient } from '@/api/merkle-proof'
 import { DaoStruct, GovernorParams, GovernorTokenParams } from '@/models'
 
 chai.use(chaiBigint)
@@ -188,14 +199,92 @@ describe('MockZKDAO', function () {
 
 		expect(fulfillTx).to.be.ok
 
-		const governorInstance = await viem.getContractAt('Governor', dao.governor)
+		log('🚩 6) Generate Merkle Tree')
 
-		const proposalState = await governorInstance.read.state([
-			'16640604756799479583065632839777932486736512847992019365521703800375735931445'
-		])
+		const PROPOSAL_ID =
+			'77686418805218504844630927999738149327922282530270400939681458713272348495808' // Assuming the proposal ID is 1
 
-		console.log(
-			`Proposal state: ${proposalState}` // Should be 4 (Succeeded)
+		const hashedMessage = keccak256(toBytes('Vote for proposal 1'))
+
+		const client = await hre.viem.getWalletClient(user2)
+
+		const signature = await client.signMessage({
+			message: { raw: hashedMessage }
+		})
+
+		const pubKey = await recoverPublicKey({
+			signature,
+			hash: hashedMessage
+		})
+
+		const pubKeyBytes = pubKey.slice(2) // remove 0x
+		const pubKeyX = pubKeyBytes.slice(0, 64)
+		const pubKeyY = pubKeyBytes.slice(64, 128)
+
+		function hexToByteArray(hex: string): number[] {
+			return Array.from(Buffer.from(hex, 'hex'))
+		}
+
+		const fullSigBytes = hexToByteArray(signature.slice(2))
+		const sig64 = fullSigBytes.slice(0, 64)
+
+		const ECDSA = {
+			_pub_key_x: hexToByteArray(pubKeyX),
+			_pub_key_y: hexToByteArray(pubKeyY),
+			_signature: sig64,
+			_hashed_message: hexToByteArray(hashedMessage.slice(2))
+		}
+
+		const merkleProofAPI = new MerkleProofAPIClient()
+		const merkleProof = await merkleProofAPI.getMerkleProof(
+			dao.governor,
+			PROPOSAL_ID,
+			user2
 		)
+
+		log('🚩 7) Generate ZK Proof')
+
+		const circuitAPIClient = new CircuitAPIClient()
+		const zkproof = await circuitAPIClient.generateZKProof({
+			_proposalId: PROPOSAL_ID,
+			_secret: merkleProof.secret,
+			_voter: getAddress(user2),
+			_weight: merkleProof.weight.toString(),
+			_choice: 1,
+			_snapshot_merkle_tree: merkleProof.snapshotMerkleTree,
+			_leaf: merkleProof.leaf,
+			_index: merkleProof.index.toString(),
+			_path: merkleProof.path,
+			...ECDSA
+		})
+
+		// 🎯 SAVE DATA FOR REMIX TESTING
+		const remixTestData = {
+			contractCall: {
+				merkleProof,
+				ecdsa: ECDSA,
+				zkProof: {
+					proofBytes: zkproof.proofBytes,
+					publicInputs: zkproof.publicInputs,
+					proofLength: zkproof.proofBytes.length
+				}
+			}
+		}
+
+		// Save to JSON file
+		const outputPath = join(process.cwd(), 'remix-test-data.json')
+		writeFileSync(outputPath, JSON.stringify(remixTestData, null, 2))
+
+		log('🚩 8) castZKVote')
+		const castZKVoteTx = await governor.write.castZKVote(
+			[PROPOSAL_ID, zkproof.proofBytes, zkproof.publicInputs],
+			{ account: user2 }
+		)
+
+		await publicClient.waitForTransactionReceipt({
+			hash: castZKVoteTx
+		})
+
+		expect(castZKVoteTx).to.be.ok
 	})
 })

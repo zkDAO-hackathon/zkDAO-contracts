@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
-import {IVerifier} from './IVerifier.sol';
+import {IVerifier} from '../Verifier.sol';
 
 interface IGovernor {
 	/// ======================
@@ -130,7 +130,7 @@ interface IGovernor {
 	function castZKVote(
 		uint256 _proposalId,
 		bytes calldata _proof,
-		PublicInputs calldata _inputs
+		bytes32[] calldata _inputs
 	) external;
 
 	/**

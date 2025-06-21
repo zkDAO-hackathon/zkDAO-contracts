@@ -7,7 +7,7 @@ import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable
 import {IZKDAO} from '../interfaces/IZKDAO.sol';
 import {IGovernorToken} from '../interfaces/IGovernorToken.sol';
 import {ITimeLock} from '../interfaces/ITimeLock.sol';
-import {IVerifier} from '../interfaces/IVerifier.sol';
+import {IVerifier} from '../Verifier.sol';
 import {IGovernor} from '../interfaces/IGovernor.sol';
 import {MockQueueProposalState} from './MockQueueProposalState.sol';
 import {Errors} from '../libraries/Errors.sol';

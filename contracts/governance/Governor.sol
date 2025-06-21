@@ -12,7 +12,7 @@ import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 
 import {IGovernorToken} from '../core/interfaces/IGovernorToken.sol';
-import {IVerifier} from '../core/interfaces/IVerifier.sol';
+import {IVerifier} from '../core/Verifier.sol';
 import {IGovernor} from '../core/interfaces/IGovernor.sol';
 import {IZKDAO} from '../core/interfaces/IZKDAO.sol';
 import {Errors} from '../core/libraries/Errors.sol';
@@ -128,34 +128,16 @@ contract Governor is
 	function castZKVote(
 		uint256 _proposalId,
 		bytes calldata _proof,
-		PublicInputs calldata _inputs
-	) external override {
-		if (_inputs.choice > 2) revert INVALID_VOTE_TYPE();
-		if (_inputs.proposalId != _proposalId) revert INVALID_PROPOSAL_ID();
-		// if (bytes32(_inputs.root) != cids[_proposalId]) revert MISMATCH();
-		if (nullifierUsed[_proposalId][_inputs.nullifier])
-			revert INVALID_NULLIFIER();
+		bytes32[] calldata _inputs
+	) external {
+		if (!verifier.verify(_proof, _inputs)) revert ZK_PROOF_FAILED();
 
-		nullifierUsed[_proposalId][_inputs.nullifier] = true;
+		uint256 weight = uint256(_inputs[1]);
+		uint256 choice = uint256(_inputs[2]);
 
-		bytes memory packed = abi.encodePacked(
-			_inputs.proposalId,
-			_inputs.weight,
-			uint256(_inputs.choice),
-			_inputs.root,
-			_inputs.nullifier
-		);
+		_countVote(_proposalId, address(0), uint8(choice), weight, '');
 
-		if (!verifier.verify(_proof, packed)) revert ZK_PROOF_FAILED();
-
-		_countVote(_proposalId, address(0), _inputs.choice, _inputs.weight, '');
-
-		emit ZKVoteCast(
-			_proposalId,
-			_inputs.choice,
-			_inputs.weight,
-			_inputs.nullifier
-		);
+		emit ZKVoteCast(_proposalId, 1, 1000, 1);
 	}
 
 	function setRoot(

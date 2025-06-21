@@ -102,11 +102,6 @@ contract MockQueueProposalState is MockConsumer {
 		uint256 index = 0;
 
 		for (uint256 i = 0; i < queue.length; i++) {
-			console.log(
-				'Checking proposal %s at snapshot %s',
-				queue[i].proposalId,
-				queue[i].snapshot
-			);
 			if (
 				queue[i].snapshot <= currentTime &&
 				!proposals[queue[i].dao][queue[i].proposalId].queued
@@ -179,6 +174,7 @@ contract MockQueueProposalState is MockConsumer {
 				);
 
 				args[i] = serialized;
+				console.log('Serialized proposal:', serialized);
 
 				emit ProposalDequeued(p.proposalId, p.snapshot);
 			}

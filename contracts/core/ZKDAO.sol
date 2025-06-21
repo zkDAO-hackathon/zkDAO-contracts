@@ -8,7 +8,7 @@ import {IGovernor} from './interfaces/IGovernor.sol';
 import {IGovernorToken} from './interfaces/IGovernorToken.sol';
 import {IQueueProposalState} from './interfaces/IQueueProposalState.sol';
 import {ITimeLock} from './interfaces/ITimeLock.sol';
-import {IVerifier} from './interfaces/IVerifier.sol';
+import {IVerifier} from './Verifier.sol';
 import {Consumer} from './Consumer.sol';
 import {QueueProposalState} from './QueueProposalState.sol';
 import {Clone} from './libraries/Clone.sol';

@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IGovernor} from './IGovernor.sol';
 import {IGovernorToken} from './IGovernorToken.sol';
 import {ITimeLock} from './ITimeLock.sol';
-import {IVerifier} from './IVerifier.sol';
+import {IVerifier} from '../Verifier.sol';
 
 interface IZKDAO {
 	/// ======================
