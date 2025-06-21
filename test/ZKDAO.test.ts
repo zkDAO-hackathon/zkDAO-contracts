@@ -2,7 +2,9 @@ import chai, { expect } from 'chai'
 import chaiBigint from 'chai-bigint'
 import { log } from 'console'
 import { BytesLike } from 'ethers'
+import { writeFileSync } from 'fs'
 import hre, { network, viem } from 'hardhat'
+import { join } from 'path'
 import {
 	Address,
 	encodeFunctionData,
@@ -314,22 +316,22 @@ describe('MockZKDAO', function () {
 			...ECDSA
 		})
 
-		// // 🎯 SAVE DATA FOR REMIX TESTING
-		// const remixTestData = {
-		// 	contractCall: {
-		// 		merkleProof,
-		// 		ecdsa: ECDSA,
-		// 		zkProof: {
-		// 			proofBytes: zkproof.proofBytes,
-		// 			publicInputs: zkproof.publicInputs,
-		// 			proofLength: zkproof.proofBytes.length
-		// 		}
-		// 	}
-		// }
+		// 🎯 SAVE DATA FOR REMIX TESTING
+		const remixTestData = {
+			contractCall: {
+				merkleProof,
+				ecdsa: ECDSA,
+				zkProof: {
+					proofBytes: zkproof.proofBytes,
+					publicInputs: zkproof.publicInputs,
+					proofLength: zkproof.proofBytes.length
+				}
+			}
+		}
 
-		// // Save to JSON file
-		// const outputPath = join(process.cwd(), 'remix-test-data.json')
-		// writeFileSync(outputPath, JSON.stringify(remixTestData, null, 2))
+		// Save to JSON file
+		const outputPath = join(process.cwd(), 'remix-test-data.json')
+		writeFileSync(outputPath, JSON.stringify(remixTestData, null, 2))
 
 		log('🚩 8) castZKVote')
 		const castZKVoteTx = await governor.write.castZKVote(
