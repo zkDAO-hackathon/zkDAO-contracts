@@ -13,6 +13,8 @@ export interface GovernorTokenParams {
 
 export interface GovernorParams {
 	name: string
+	description: string
+	logo: string
 	votingDelay: bigint
 	votingPeriod: bigint
 	proposalThreshold: bigint

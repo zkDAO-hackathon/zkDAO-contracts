@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
+import { parseEther } from 'viem'
 
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
@@ -9,8 +10,9 @@ const deployZkDao: DeployFunction = async function (
 ) {
 	const { getNamedAccounts, deployments, network } = hre
 	const { deploy, log, get } = deployments
-	const { deployer } = await getNamedAccounts()
+	const { deployer, factory } = await getNamedAccounts()
 
+	const linkToken = await get('MockErc20')
 	const governorToken = await get('GovernorToken')
 	const timeLock = await get('TimeLock')
 	const governor = await get('Governor')
@@ -19,16 +21,19 @@ const deployZkDao: DeployFunction = async function (
 	log('----------------------------------------------------')
 	log('Deploying MockZKDAO and waiting for confirmations...')
 
-	const tokenAddress: string = governorToken.address
+	const linkTokenAddress: string = linkToken.address
+	const governorTokenAddress: string = governorToken.address
 	const timeLockAddress: string = timeLock.address
 	const governorAddress: string = governor.address
 	const verifierAddress: string = verifier.address
 
 	const args: string[] = [
-		tokenAddress,
+		governorTokenAddress,
 		timeLockAddress,
 		governorAddress,
-		verifierAddress
+		verifierAddress,
+		linkTokenAddress,
+		factory
 	]
 
 	const zkDao = await deploy('MockZKDAO', {
@@ -43,6 +48,19 @@ const deployZkDao: DeployFunction = async function (
 	if (!developmentChains.includes(network.name)) {
 		await verify(verifier.address, args)
 	}
+
+	log('----------------------------------------------------')
+	log('Funding factory wallet with NATIVE token...')
+
+	const wallet = await hre.viem.getWalletClient(deployer)
+
+	const transferNativeTokenTx = await wallet.sendTransaction({
+		account: deployer,
+		to: factory,
+		value: parseEther('1')
+	})
+
+	log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
 }
 
 export default deployZkDao

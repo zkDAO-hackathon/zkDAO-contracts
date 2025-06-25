@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {ERC20} from 'solady/src/tokens/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 
@@ -11,11 +13,13 @@ import {ITimeLock} from './interfaces/ITimeLock.sol';
 import {IVerifier} from './Verifier.sol';
 import {Consumer} from './Consumer.sol';
 import {QueueProposalState} from './QueueProposalState.sol';
+import {Transfer} from './libraries/Transfer.sol';
+import {Errors} from './libraries/Errors.sol';
 import {Clone} from './libraries/Clone.sol';
 
 import 'hardhat/console.sol';
 
-contract ZKDAO is QueueProposalState, Consumer {
+contract ZKDAO is QueueProposalState, Consumer, Transfer {
 	/// ======================
 	/// ======= Structs ======
 	/// ======================
@@ -31,6 +35,8 @@ contract ZKDAO is QueueProposalState, Consumer {
 		uint32 votingPeriod;
 		uint256 proposalThreshold;
 		uint256 quorumFraction;
+		string description;
+		string logo;
 	}
 
 	struct DAO {
@@ -46,14 +52,17 @@ contract ZKDAO is QueueProposalState, Consumer {
 
 	mapping(address => uint256) private nonces;
 	mapping(uint256 => DAO) private daos;
+	mapping(address => uint256) public daoIds;
 
+	uint256 public price = 5 ether; // Price in LINK tokens for creating a DAO
 	uint256 public daoIdCounter;
 
+	address public factory;
 	IGovernorToken public governorToken;
 	ITimeLock public timelock;
 	IVerifier public verifier;
-	IQueueProposalState public queueProposalState;
 	IGovernor public governor;
+	IERC20 public linkToken;
 
 	/// ======================
 	/// ======= Events =======
@@ -67,17 +76,39 @@ contract ZKDAO is QueueProposalState, Consumer {
 		address governor
 	);
 
+	event PaidForDaoCreation(
+		GovernorTokenParams tokenParams,
+		uint256 minDelay,
+		GovernorParams governorParams,
+		address[] to,
+		uint256[] amounts,
+		uint256 value
+	);
+
 	constructor(
 		address _governorToken,
 		address _timelock,
 		address _governor,
 		address _verifier,
-		address _router
+		address _router,
+		address _linkAddress,
+		address _factory
 	) Consumer(_router) {
 		governorToken = IGovernorToken(_governorToken);
 		timelock = ITimeLock(_timelock);
 		governor = IGovernor(_governor);
 		verifier = IVerifier(_verifier);
+		linkToken = IERC20(_linkAddress);
+		factory = _factory;
+	}
+
+	/// =========================
+	/// ====== Modifiers ========
+	/// =========================
+
+	modifier onlyFactory() {
+		if (msg.sender != factory) revert UNAUTHORIZED();
+		_;
 	}
 
 	/// ==========================
@@ -92,13 +123,42 @@ contract ZKDAO is QueueProposalState, Consumer {
 	/// == External / Public Functions ==
 	/// =================================
 
+	function payForDaoCreation(
+		GovernorTokenParams calldata _tokenParams,
+		uint256 _minDelay,
+		GovernorParams calldata _governorParams,
+		address[] calldata _to,
+		uint256[] calldata _amounts,
+		uint256 _value
+	) external payable {
+		if (linkToken.balanceOf(msg.sender) < price) revert INSUFFICIENT_FUNDS();
+
+		if (linkToken.allowance(msg.sender, address(this)) < price)
+			revert INSUFFICIENT_ALLOWANCE();
+
+		_transferAmountFrom(
+			address(linkToken),
+			TransferData({from: msg.sender, to: address(this), amount: price})
+		);
+
+		emit PaidForDaoCreation(
+			_tokenParams,
+			_minDelay,
+			_governorParams,
+			_to,
+			_amounts,
+			_value
+		);
+	}
+
 	function createDao(
+		address _creator,
 		GovernorTokenParams calldata _tokenParams,
 		uint256 _minDelay,
 		GovernorParams calldata _governorParams,
 		address[] calldata _to,
 		uint256[] calldata _amounts
-	) external {
+	) external onlyFactory {
 		uint256 baseNonce = ++nonces[msg.sender];
 		uint256 id = ++daoIdCounter;
 
@@ -209,11 +269,11 @@ contract ZKDAO is QueueProposalState, Consumer {
 				votingPeriod: governorParams.votingPeriod,
 				proposalThreshold: governorParams.proposalThreshold,
 				votesQuorumFraction: governorParams.quorumFraction,
-				id: id
+				id: id,
+				description: governorParams.description,
+				logo: governorParams.logo
 			});
 
 		IGovernor(_governorClone).initialize(memoryParams, _verifier);
 	}
-
-	receive() external payable {}
 }

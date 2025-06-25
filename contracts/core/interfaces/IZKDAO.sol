@@ -18,6 +18,8 @@ interface IZKDAO {
 
 	struct GovernorParams {
 		string name;
+		string description;
+		string logo;
 		uint48 votingDelay;
 		uint32 votingPeriod;
 		uint256 proposalThreshold;
@@ -41,6 +43,15 @@ interface IZKDAO {
 		address token,
 		address timelock,
 		address governor
+	);
+
+	event PaidForDaoCreation(
+		GovernorTokenParams tokenParams,
+		uint256 minDelay,
+		GovernorParams governorParams,
+		address[] to,
+		uint256[] amounts,
+		uint256 value
 	);
 
 	/// ==========================
@@ -98,6 +109,15 @@ interface IZKDAO {
 		GovernorParams calldata _governorParams,
 		address[] calldata _to,
 		uint256[] calldata _amounts
+	) external payable;
+
+	function payForDaoCreation(
+		GovernorTokenParams calldata _tokenParams,
+		uint256 _minDelay,
+		GovernorParams calldata _governorParams,
+		address[] calldata _to,
+		uint256[] calldata _amounts,
+		uint256 _value
 	) external payable;
 
 	/**

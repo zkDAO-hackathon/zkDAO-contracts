@@ -1,7 +1,8 @@
 {
 	"name": "zkdao-contracts",
 	"scripts": {
-		"chain": "NODE_ENV=ethereumSepolia hardhat node --tags localhost",
+		"chain1": "NODE_ENV=ethereumSepolia hardhat node --tags localhost",
+		"chain2": "NODE_ENV=ethereumSepolia hardhat node --port 8546",
 		"clean": "NODE_ENV=ethereumSepolia hardhat clean && rm -rf cache",
 		"compile": "NODE_ENV=ethereumSepolia hardhat compile",
 		"coverage": "SOLIDITY_COVERAGE=true hardhat coverage",
@@ -13,7 +14,7 @@
 		"lint": "eslint",
 		"lint:fix": "eslint --fix",
 		"test": "NODE_ENV=ethereumSepolia hardhat test",
-		"test:localhost": "hardhat test --network localhost",
+		"test:localhost": "NODE_ENV=ethereumSepolia hardhat test --network localhost",
 		"typechain": "hardhat typechain"
 	},
 	"dependencies": {},

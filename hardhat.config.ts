@@ -11,7 +11,6 @@ import { HardhatUserConfig, SolcUserConfig } from 'hardhat/types'
 import { ensureEnvVar } from './utils/ensure-env-var'
 
 // Load environment variables
-
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` })
 dotenv.config()
 
@@ -20,11 +19,13 @@ const {
 	SCAN_API_KEY,
 	GAS_REPORT,
 	RPC_HTTPS,
-	WALLET_PRIVATE_KEY
+	STAGING_WALLET_PUBLIC_KEY,
+	STAGING_WALLET_PRIVATE_KEY,
+	STAGING_FACTORY_WALLET_PUBLIC_KEY,
+	STAGING_FACTORY_WALLET_PRIVATE_KEY
 } = process.env
 
 // Ensure environment variables
-
 const url = ensureEnvVar(RPC_HTTPS, 'RPC_HTTPS')
 
 const apiKey = ensureEnvVar(SCAN_API_KEY, 'SCAN_API_KEY')
@@ -36,14 +37,25 @@ const coinmarketcap = ensureEnvVar(
 
 const enabled = GAS_REPORT === 'true' ? true : false
 
-const walletPrivateKey = ensureEnvVar(WALLET_PRIVATE_KEY, 'WALLET_PRIVATE_KEY')
+const walletPrivateKey = ensureEnvVar(
+	STAGING_WALLET_PRIVATE_KEY,
+	'STAGING_WALLET_PRIVATE_KEY'
+)
+
+const factoryWalletPublicKey = ensureEnvVar(
+	STAGING_FACTORY_WALLET_PUBLIC_KEY,
+	'STAGING_FACTORY_WALLET_PUBLIC_KEY'
+)
+
+const factoryWalletPrivateKey = ensureEnvVar(
+	STAGING_FACTORY_WALLET_PRIVATE_KEY,
+	'STAGING_FACTORY_WALLET_PRIVATE_KEY'
+)
 
 // Set up accounts
-
-const accounts: string[] = [walletPrivateKey]
+const accounts: string[] = [walletPrivateKey, factoryWalletPrivateKey]
 
 // Set up Solidity compiler
-
 const solcUserConfig = (version: string): SolcUserConfig => {
 	return {
 		version,
@@ -64,11 +76,13 @@ const config: HardhatUserConfig = {
 			chainId: 1337
 		},
 		localhost: {
-			allowUnlimitedContractSize: true,
-			chainId: 1337,
-			url: 'http://localhost:8545'
+			url: 'http://127.0.0.1:8545',
+			chainId: 1337
 		},
-
+		localhost2: {
+			url: 'http://127.0.0.1:8546',
+			chainId: 31338
+		},
 		celo: {
 			chainId: 42220,
 			accounts,
@@ -86,6 +100,9 @@ const config: HardhatUserConfig = {
 		deployer: {
 			default: 0
 		},
+
+		factory: { default: factoryWalletPublicKey },
+
 		user1: {
 			default: 1
 		},

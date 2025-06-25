@@ -19,6 +19,8 @@ interface IGovernor {
 		uint256 proposalThreshold;
 		uint256 votesQuorumFraction;
 		uint256 id;
+		string description;
+		string logo;
 	}
 
 	struct PublicInputs {

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {ERC20} from 'solady/src/tokens/ERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 
@@ -10,12 +12,13 @@ import {ITimeLock} from '../interfaces/ITimeLock.sol';
 import {IVerifier} from '../Verifier.sol';
 import {IGovernor} from '../interfaces/IGovernor.sol';
 import {MockQueueProposalState} from './MockQueueProposalState.sol';
+import {Transfer} from '../libraries/Transfer.sol';
 import {Errors} from '../libraries/Errors.sol';
 import {Clone} from '../libraries/Clone.sol';
 
 import 'hardhat/console.sol';
 
-contract MockZKDAO is IZKDAO, MockQueueProposalState, Errors {
+contract MockZKDAO is IZKDAO, MockQueueProposalState, Transfer, Errors {
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
@@ -24,12 +27,15 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Errors {
 	mapping(uint256 => DAO) private daos;
 	mapping(address => uint256) public daoIds;
 
+	uint256 public price = 5 ether; // Price in LINK tokens for creating a DAO
+	uint256 public daoCount;
+
+	address public factory;
 	IGovernorToken public governorToken;
 	ITimeLock public timelock;
 	IVerifier public verifier;
 	IGovernor public governor;
-
-	uint256 public daoCount;
+	IERC20 public linkToken;
 
 	receive() external payable {}
 
@@ -41,17 +47,26 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Errors {
 		address _governorToken,
 		address _timelock,
 		address _governor,
-		address _verifier
+		address _verifier,
+		address _linkAddress,
+		address _factory
 	) {
 		governorToken = IGovernorToken(_governorToken);
 		timelock = ITimeLock(_timelock);
 		governor = IGovernor(_governor);
 		verifier = IVerifier(_verifier);
+		linkToken = IERC20(_linkAddress);
+		factory = _factory;
 	}
 
 	/// =========================
 	/// ======= Modifiers =======
 	/// =========================
+
+	modifier onlyFactory() {
+		if (msg.sender != factory) revert UNAUTHORIZED();
+		_;
+	}
 
 	modifier onlyZkDaos() {
 		uint256 daoId = daoIds[msg.sender];
@@ -100,13 +115,41 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Errors {
 	/// == External / Public Functions ==
 	/// =================================
 
+	function payForDaoCreation(
+		GovernorTokenParams calldata _tokenParams,
+		uint256 _minDelay,
+		GovernorParams calldata _governorParams,
+		address[] calldata _to,
+		uint256[] calldata _amounts,
+		uint256 _value
+	) external payable {
+		if (linkToken.balanceOf(msg.sender) < price) revert INSUFFICIENT_FUNDS();
+
+		if (linkToken.allowance(msg.sender, address(this)) < price)
+			revert INSUFFICIENT_ALLOWANCE();
+
+		_transferAmountFrom(
+			address(linkToken),
+			TransferData({from: msg.sender, to: address(this), amount: price})
+		);
+
+		emit PaidForDaoCreation(
+			_tokenParams,
+			_minDelay,
+			_governorParams,
+			_to,
+			_amounts,
+			_value
+		);
+	}
+
 	function createDao(
 		GovernorTokenParams calldata _tokenParams,
 		uint256 _minDelay,
 		GovernorParams calldata _governorParams,
 		address[] calldata _to,
 		uint256[] calldata _amounts
-	) external payable override {
+	) external payable onlyFactory {
 		if (_to.length != _amounts.length) revert MISMATCH();
 
 		uint256 baseNonce = ++nonces[msg.sender];
@@ -226,7 +269,9 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Errors {
 				votingPeriod: governorParams.votingPeriod,
 				proposalThreshold: governorParams.proposalThreshold,
 				votesQuorumFraction: governorParams.quorumFraction,
-				id: id
+				id: id,
+				description: governorParams.description,
+				logo: governorParams.logo
 			});
 
 		IGovernor(_governorClone).initialize(memoryParams, _verifier);

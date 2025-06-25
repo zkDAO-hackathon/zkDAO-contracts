@@ -10,6 +10,7 @@ import {
 	encodeFunctionData,
 	getAddress,
 	keccak256,
+	parseEther,
 	recoverPublicKey,
 	toBytes
 } from 'viem'
@@ -28,12 +29,19 @@ describe('MockZKDAO', function () {
 	let user3: string
 	let user4: string
 	let mockZkDao: any
+	let linkToken: any
 
 	async function deployFixture(): Promise<any> {
 		const { deployments, getNamedAccounts } = hre
 		const { deployer, user1, user2, user3, user4 } = await getNamedAccounts()
 
 		await deployments.fixture(['localhost'])
+
+		// LINK token
+		const linkTokenAddress = (await deployments.get('MockErc20'))
+			.address as Address
+
+		const linkToken = await viem.getContractAt('MockErc20', linkTokenAddress)
 
 		// Mock ZKDAO
 		const mockZkDaoAddress = (await deployments.get('MockZKDAO'))
@@ -47,25 +55,18 @@ describe('MockZKDAO', function () {
 			user2,
 			user3,
 			user4,
-			mockZkDao
+			mockZkDao,
+			linkToken
 		}
 	}
 
 	beforeEach(async function () {
 		fixture = await deployFixture()
-		;({ deployer, user1, user2, user3, user4, mockZkDao } = fixture)
+		;({ deployer, user1, user2, user3, user4, mockZkDao, linkToken } = fixture)
 	})
 
 	it('Workflow', async function () {
-		log('🚩 1) Create DAO')
-
-		/*
-		 * TODO: save metadata for the DAO
-		 * Metadata for the DAO
-		 * - name: Name of the DAO token
-		 * - description: The name of the DAO token that will be created.
-		 * - logo: Image URL for the DAO token logo
-		 */
+		log('🚩 0) pay for create DAO')
 
 		const GOVERNOR_TOKEN_PARAMS: GovernorTokenParams = {
 			name: 'Bogota DAO Token',
@@ -76,6 +77,8 @@ describe('MockZKDAO', function () {
 
 		const GOVERNOR_PARAMS: GovernorParams = {
 			name: 'Bogota DAO',
+			description: 'DAO for Bogota',
+			logo: 'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafybeibendwijlnunkx7mpsgre2kquvtlt5tnfk7eeydqegyi4hpmrbxai',
 			votingDelay: 604800n, // 1 week
 			votingPeriod: 604800n, // 1 week
 			proposalThreshold: 1n, // 1 token
@@ -85,6 +88,25 @@ describe('MockZKDAO', function () {
 		const TO = [user1, user2, user3] // Addresses of the DAO members
 
 		const AMOUNTS = [1000n, 1000n, 1000n] // Amounts of tokens to be allocated to each member
+
+		const VALUE = parseEther('5')
+
+		await linkToken.write.mint([user1, parseEther('10')], {
+			account: deployer
+		})
+
+		await linkToken.write.approve([mockZkDao.address, parseEther('10')], {
+			account: user1
+		})
+
+		const payForDaoCreationTx = await mockZkDao.write.payForDaoCreation(
+			[GOVERNOR_TOKEN_PARAMS, MIN_DELAY, GOVERNOR_PARAMS, TO, AMOUNTS, VALUE],
+			{ account: user1 }
+		)
+
+		expect(payForDaoCreationTx).to.be.ok
+
+		log('🚩 1) Create DAO')
 
 		const publicClient = await hre.viem.getPublicClient()
 
@@ -105,8 +127,6 @@ describe('MockZKDAO', function () {
 		const daoCreatedLog = createDaoReceipt.logs.find(
 			log => log.topics[0] === DAO_CREATED_TOPIC
 		)
-
-		if (!daoCreatedLog) throw new Error('DaoCreated log not found')
 
 		const DAO_ID = BigInt(daoCreatedLog.topics[1])
 

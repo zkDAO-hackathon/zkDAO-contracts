@@ -6,6 +6,8 @@ contract Errors {
 	/// ====== Generic =======
 	/// ======================
 
+	error INSUFFICIENT_ALLOWANCE();
+	error INSUFFICIENT_FUNDS();
 	error MISMATCH();
 	error UNAUTHORIZED();
 

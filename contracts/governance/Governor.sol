@@ -42,6 +42,8 @@ contract Governor is
 	IZKDAO public zkDao;
 
 	uint256 public id;
+	string public description;
+	string public logo;
 
 	/// =========================
 	/// ====== Constructor ======
@@ -82,6 +84,8 @@ contract Governor is
 		id = params.id;
 		verifier = _verifier;
 		zkDao = IZKDAO(payable(msg.sender));
+		description = params.description;
+		logo = params.logo;
 	}
 
 	/// ==========================
