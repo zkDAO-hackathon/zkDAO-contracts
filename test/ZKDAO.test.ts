@@ -24,6 +24,7 @@ chai.use(chaiBigint)
 describe('MockZKDAO', function () {
 	let fixture: any
 	let deployer: string
+	let factory: string
 	let user1: string
 	let user2: string
 	let user3: string
@@ -33,9 +34,13 @@ describe('MockZKDAO', function () {
 
 	async function deployFixture(): Promise<any> {
 		const { deployments, getNamedAccounts } = hre
-		const { deployer, user1, user2, user3, user4 } = await getNamedAccounts()
+		const { deployer, factory, user1, user2, user3, user4 } =
+			await getNamedAccounts()
 
 		await deployments.fixture(['localhost'])
+
+		const ws = new WebSocket('ws://127.0.0.1:8545')
+		ws.onopen = () => console.log('✅ Conectado al WebSocket de Hardhat')
 
 		// LINK token
 		const linkTokenAddress = (await deployments.get('MockErc20'))
@@ -51,6 +56,7 @@ describe('MockZKDAO', function () {
 
 		return {
 			deployer,
+			factory,
 			user1,
 			user2,
 			user3,
@@ -62,7 +68,8 @@ describe('MockZKDAO', function () {
 
 	beforeEach(async function () {
 		fixture = await deployFixture()
-		;({ deployer, user1, user2, user3, user4, mockZkDao, linkToken } = fixture)
+		;({ deployer, factory, user1, user2, user3, user4, mockZkDao, linkToken } =
+			fixture)
 	})
 
 	it('Workflow', async function () {
@@ -113,7 +120,7 @@ describe('MockZKDAO', function () {
 		// 🚩 1) Create DAO
 		const createDaoTx = await mockZkDao.write.createDao(
 			[GOVERNOR_TOKEN_PARAMS, MIN_DELAY, GOVERNOR_PARAMS, TO, AMOUNTS],
-			{ account: user1 }
+			{ account: factory }
 		)
 
 		const createDaoReceipt = await publicClient.getTransactionReceipt({
