@@ -34,4 +34,4 @@ const deployMockErc20: DeployFunction = async function (
 }
 
 export default deployMockErc20
-deployMockErc20.tags = ['localhost', 'l-deploy', 'l-mockErc20']
+deployMockErc20.tags = ['localhost', 'l-deploy', 'l-link']

@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
+import { stringToHex } from 'viem'
 
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
@@ -8,7 +9,7 @@ const deployTimeLock: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
-	const { deploy, log } = deployments
+	const { log, save } = deployments
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
@@ -16,9 +17,11 @@ const deployTimeLock: DeployFunction = async function (
 
 	const args: string[] = []
 
-	const timeLock = await deploy('TimeLock', {
+	const timeLock = await deployments.deterministic('TimeLock', {
 		from: deployer,
 		args,
+		salt: stringToHex('timelock-v1'),
+		contract: 'TimeLock',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
@@ -28,6 +31,12 @@ const deployTimeLock: DeployFunction = async function (
 	if (!developmentChains.includes(network.name)) {
 		await verify(timeLock.address, args)
 	}
+
+	const artifact = await deployments.getExtendedArtifact('GovernorToken')
+	await save('TimeLock', {
+		address: timeLock.address,
+		...artifact
+	})
 }
 
 export default deployTimeLock

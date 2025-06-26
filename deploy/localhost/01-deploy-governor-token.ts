@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
+import { stringToHex } from 'viem'
 
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
@@ -8,7 +9,7 @@ const deployGovernorToken: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
-	const { deploy, log } = deployments
+	const { log, save } = deployments
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
@@ -16,9 +17,11 @@ const deployGovernorToken: DeployFunction = async function (
 
 	const args: string[] = []
 
-	const governorToken = await deploy('GovernorToken', {
+	const governorToken = await deployments.deterministic('GovernorToken', {
 		from: deployer,
 		args,
+		salt: stringToHex('governor-token-v1'),
+		contract: 'GovernorToken',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
@@ -28,6 +31,12 @@ const deployGovernorToken: DeployFunction = async function (
 	if (!developmentChains.includes(network.name)) {
 		await verify(governorToken.address, args)
 	}
+
+	const artifact = await deployments.getExtendedArtifact('GovernorToken')
+	await save('GovernorToken', {
+		address: governorToken.address,
+		...artifact
+	})
 }
 
 export default deployGovernorToken

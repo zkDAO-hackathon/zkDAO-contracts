@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
+import { stringToHex } from 'viem'
 
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
@@ -8,7 +9,7 @@ const deployGovernor: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
-	const { deploy, log } = deployments
+	const { log, save } = deployments
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
@@ -16,9 +17,11 @@ const deployGovernor: DeployFunction = async function (
 
 	const args: string[] = []
 
-	const governor = await deploy('Governor', {
+	const governor = await deployments.deterministic('Governor', {
 		from: deployer,
 		args,
+		salt: stringToHex('governor-v1'),
+		contract: 'Governor',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
@@ -28,6 +31,12 @@ const deployGovernor: DeployFunction = async function (
 	if (!developmentChains.includes(network.name)) {
 		await verify(governor.address, args)
 	}
+
+	const artifact = await deployments.getExtendedArtifact('Governor')
+	await save('Governor', {
+		address: governor.address,
+		...artifact
+	})
 }
 
 export default deployGovernor

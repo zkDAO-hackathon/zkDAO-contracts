@@ -9,7 +9,7 @@ const deployZkDao: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
-	const { deploy, log, get } = deployments
+	const { log, get, save } = deployments
 	const { deployer, factory } = await getNamedAccounts()
 
 	const linkToken = await get('MockErc20')
@@ -36,9 +36,10 @@ const deployZkDao: DeployFunction = async function (
 		factory
 	]
 
-	const zkDao = await deploy('MockZKDAO', {
+	const zkDao = await deployments.deterministic('MockZKDAO', {
 		from: deployer,
 		args,
+		contract: 'MockZKDAO',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
@@ -48,6 +49,12 @@ const deployZkDao: DeployFunction = async function (
 	if (!developmentChains.includes(network.name)) {
 		await verify(verifier.address, args)
 	}
+
+	const artifact = await deployments.getExtendedArtifact('MockZKDAO')
+	await save('MockZKDAO', {
+		address: zkDao.address,
+		...artifact
+	})
 
 	log('----------------------------------------------------')
 	log('Funding factory wallet with NATIVE token...')
