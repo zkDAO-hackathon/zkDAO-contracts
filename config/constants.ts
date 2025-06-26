@@ -9,11 +9,11 @@ export const developmentChains = ['hardhat', 'localhost']
 export const networkConfig: NetworkConfigInfo = {
 	localhost: {},
 	hardhat: {},
-	ethreumSepolia: {
-		blockConfirmations: 3
+	ethereumSepolia: {
+		blockConfirmations: 6
 	},
 	avalancheFuji: {
-		blockConfirmations: 3
+		blockConfirmations: 6
 	}
 }
 

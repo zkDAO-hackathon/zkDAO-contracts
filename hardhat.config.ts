@@ -7,6 +7,7 @@ import 'tsconfig-paths/register'
 
 import dotenv from 'dotenv'
 import { HardhatUserConfig, SolcUserConfig } from 'hardhat/types'
+import { sepolia } from 'viem/chains'
 
 import { ensureEnvVar } from './utils/ensure-env-var'
 
@@ -19,7 +20,6 @@ const {
 	SCAN_API_KEY,
 	GAS_REPORT,
 	RPC_HTTPS,
-	STAGING_WALLET_PUBLIC_KEY,
 	STAGING_WALLET_PRIVATE_KEY,
 	STAGING_FACTORY_WALLET_PUBLIC_KEY,
 	STAGING_FACTORY_WALLET_PRIVATE_KEY
@@ -62,7 +62,7 @@ const solcUserConfig = (version: string): SolcUserConfig => {
 		settings: {
 			optimizer: {
 				enabled: true,
-				runs: 2000
+				runs: 200
 			}
 		}
 	}
@@ -83,16 +83,10 @@ const config: HardhatUserConfig = {
 			url: 'http://127.0.0.1:8546',
 			chainId: 31338
 		},
-		celo: {
-			chainId: 42220,
+		ethereumSepolia: {
+			url,
 			accounts,
-			url
-		},
-
-		celoAlfajores: {
-			chainId: 44787,
-			accounts,
-			url
+			chainId: sepolia.id
 		}
 	},
 
@@ -122,7 +116,18 @@ const config: HardhatUserConfig = {
 	},
 
 	solidity: {
-		compilers: [solcUserConfig('0.8.28')]
+		compilers: [solcUserConfig('0.8.28')],
+		overrides: {
+			'contracts/core/Verifier.sol': {
+				version: '0.8.28',
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 2000
+					}
+				}
+			}
+		}
 	},
 
 	etherscan: {
