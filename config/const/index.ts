@@ -1,4 +1,4 @@
-import { Address, Hex, zeroAddress } from 'viem'
+import { Address, Hex, parseEther, zeroAddress } from 'viem'
 
 import { NetworkConfigInfo } from '@/models'
 
@@ -52,9 +52,57 @@ export const AVALANCHE_FUJI_DON_ID: Hex =
 
 // Common
 
+export const PRICE = parseEther('5') // 5 LINK with 18 decimals
+
 export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
 
 export const SOURCE: string = 'https://example.com/source' // replace with actual source URL
+
+export const LINK_TOKEN: (chain: string) => Address = (
+	chain: string
+): Address => {
+	if (chain === 'ethereumSepolia') {
+		return ETHEREUM_SEPOLIA_LINK_TOKEN
+	} else if (chain === 'avalancheFuji') {
+		return AVALANCHE_FUJI_LINK_TOKEN
+	} else {
+		throw new Error(`Unsupported chain: ${chain}`)
+	}
+}
+
+export const FUNCTIONS_ROUTER: (chain: string) => Address = (
+	chain: string
+): Address => {
+	if (chain === 'ethereumSepolia') {
+		return ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER
+	} else if (chain === 'avalancheFuji') {
+		return AVALANCHE_FUJI_FUNCTIONS_ROUTER
+	} else {
+		throw new Error(`Unsupported chain: ${chain}`)
+	}
+}
+
+export const SUBSCRIPTION_ID: (chain: string) => bigint = (
+	chain: string
+): bigint => {
+	if (chain === 'ethereumSepolia') {
+		return ETHEREUM_SEPOLIA_SUBSCRIPTION_ID
+	} else if (chain === 'avalancheFuji') {
+		return AVALANCHE_FUJI_SUBSCRIPTION_ID
+	} else {
+		throw new Error(`Unsupported chain: ${chain}`)
+	}
+}
+
+export const DON_ID: (chain: string) => Hex = (chain: string): Hex => {
+	if (chain === 'ethereumSepolia') {
+		return ETHEREUM_SEPOLIA_DON_ID
+	} else if (chain === 'avalancheFuji') {
+		return AVALANCHE_FUJI_DON_ID
+	} else {
+		throw new Error(`Unsupported chain: ${chain}`)
+	}
+}
 
 // Args
 

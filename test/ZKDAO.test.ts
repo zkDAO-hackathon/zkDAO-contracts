@@ -39,9 +39,6 @@ describe('MockZKDAO', function () {
 
 		await deployments.fixture(['localhost'])
 
-		const ws = new WebSocket('ws://127.0.0.1:8545')
-		ws.onopen = () => console.log('✅ Conectado al WebSocket de Hardhat')
-
 		// LINK token
 		const linkTokenAddress = (await deployments.get('MockErc20'))
 			.address as Address
@@ -73,6 +70,8 @@ describe('MockZKDAO', function () {
 	})
 
 	it('Workflow', async function () {
+		// On websocket connection, the test will fail if the contract is not deployed
+
 		log('🚩 0) pay for create DAO')
 
 		const GOVERNOR_TOKEN_PARAMS: GovernorTokenParams = {

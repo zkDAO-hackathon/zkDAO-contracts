@@ -4,6 +4,7 @@ import '@openzeppelin/hardhat-upgrades'
 import '@typechain/hardhat'
 import 'hardhat-deploy'
 import 'tsconfig-paths/register'
+import './tasks'
 
 import dotenv from 'dotenv'
 import { HardhatUserConfig, SolcUserConfig } from 'hardhat/types'
