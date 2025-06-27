@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
+import { stringToHex } from 'viem'
 
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
@@ -8,7 +9,7 @@ const deployMockErc20: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
-	const { deploy, log } = deployments
+	const { log } = deployments
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
@@ -19,12 +20,16 @@ const deployMockErc20: DeployFunction = async function (
 
 	const args = [name, symbol]
 
-	const mockErc20 = await deploy('MockErc20', {
+	const deterministic = await deployments.deterministic('MockErc20', {
 		from: deployer,
 		args,
+		deterministicDeployment: stringToHex('mock-erc20-v1'),
+		contract: 'MockErc20',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
+
+	const mockErc20 = await deterministic.deploy()
 
 	log(`LINK contract at ${mockErc20.address}`)
 

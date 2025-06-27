@@ -17,14 +17,16 @@ const deployTimeLock: DeployFunction = async function (
 
 	const args: string[] = []
 
-	const timeLock = await deployments.deterministic('TimeLock', {
+	const deterministic = await deployments.deterministic('TimeLock', {
 		from: deployer,
 		args,
-		salt: stringToHex('timelock-v1'),
+		deterministicDeployment: stringToHex('timelock-v1'),
 		contract: 'TimeLock',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
+
+	const timeLock = await deterministic.deploy()
 
 	log(`TimeLock contract at ${timeLock.address}`)
 

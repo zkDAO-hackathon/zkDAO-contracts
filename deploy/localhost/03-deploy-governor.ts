@@ -17,14 +17,16 @@ const deployGovernor: DeployFunction = async function (
 
 	const args: string[] = []
 
-	const governor = await deployments.deterministic('Governor', {
+	const deterministic = await deployments.deterministic('Governor', {
 		from: deployer,
 		args,
-		salt: stringToHex('governor-v1'),
+		deterministicDeployment: stringToHex('governor-v1'),
 		contract: 'Governor',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
+
+	const governor = await deterministic.deploy()
 
 	log(`Governor contract at ${governor.address}`)
 
