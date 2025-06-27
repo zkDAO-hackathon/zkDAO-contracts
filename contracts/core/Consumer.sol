@@ -5,16 +5,12 @@ import {FunctionsClient} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/Fu
 import {ConfirmedOwner} from '@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol';
 import {FunctionsRequest} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol';
 
-import {IZKDAO} from '../core/interfaces/IZKDAO.sol';
+import {IConsumer} from './interfaces/IConsumer.sol';
+import {IGovernor} from './interfaces/IConsumer.sol';
+import {Errors} from '../core/libraries/Errors.sol';
 
-contract Consumer is FunctionsClient, ConfirmedOwner {
+contract Consumer is FunctionsClient, ConfirmedOwner, IConsumer, Errors {
 	using FunctionsRequest for FunctionsRequest.Request;
-
-	/// ======================
-	/// ======= Errors =======
-	/// ======================
-
-	error UnexpectedRequestID(bytes32 requestId);
 
 	/// =========================
 	/// === Storage Variables ===
@@ -24,62 +20,30 @@ contract Consumer is FunctionsClient, ConfirmedOwner {
 	bytes public s_lastResponse;
 	bytes public s_lastError;
 
-	/// ======================
-	/// ======= Events =======
-	/// ======================
+	Proposal[] internal queue;
 
-	event Response(bytes32 indexed requestId, bytes response, bytes err);
+	uint256 private requestCounter;
+
+	// daoId => proposalId => Proposal
+	mapping(IGovernor => mapping(uint256 => Proposal)) internal proposals;
+	mapping(bytes32 => Proposal[]) private pendingProposals;
+
+	// Mock storage for simulating responses
+	mapping(bytes32 => bytes) private mockResponses;
+	mapping(bytes32 => bytes) private mockErrors;
+	mapping(bytes32 => bool) private pendingRequests;
 
 	/// =========================
 	/// ====== Constructor ======
 	/// =========================
 
 	constructor(
-		address router
-	) FunctionsClient(router) ConfirmedOwner(msg.sender) {}
+		address _router
+	) FunctionsClient(_router) ConfirmedOwner(msg.sender) {}
 
 	/// =================================
 	/// == External / Public Functions ==
 	/// =================================
-
-	/**
-	 * @notice Send a simple request
-	 * @param source JavaScript source code
-	 * @param encryptedSecretsUrls Encrypted URLs where to fetch user secrets
-	 * @param donHostedSecretsSlotID Don hosted secrets slotId
-	 * @param donHostedSecretsVersion Don hosted secrets version
-	 * @param args List of arguments accessible from within the source code
-	 * @param bytesArgs Array of bytes arguments, represented as hex strings
-	 * @param subscriptionId Billing ID
-	 */
-	function sendRequest(
-		string memory source,
-		bytes memory encryptedSecretsUrls,
-		uint8 donHostedSecretsSlotID,
-		uint64 donHostedSecretsVersion,
-		string[] memory args,
-		bytes[] memory bytesArgs,
-		uint64 subscriptionId,
-		uint32 gasLimit,
-		bytes32 donID
-	) external onlyOwner returns (bytes32 requestId) {
-		FunctionsRequest.Request memory req;
-		req.initializeRequestForInlineJavaScript(source);
-		if (encryptedSecretsUrls.length > 0)
-			req.addSecretsReference(encryptedSecretsUrls);
-		else if (donHostedSecretsVersion > 0) {
-			req.addDONHostedSecrets(donHostedSecretsSlotID, donHostedSecretsVersion);
-		}
-		if (args.length > 0) req.setArgs(args);
-		if (bytesArgs.length > 0) req.setBytesArgs(bytesArgs);
-		s_lastRequestId = _sendRequest(
-			req.encodeCBOR(),
-			subscriptionId,
-			gasLimit,
-			donID
-		);
-		return s_lastRequestId;
-	}
 
 	/**
 	 * @notice Send a pre-encoded CBOR request
@@ -89,14 +53,19 @@ contract Consumer is FunctionsClient, ConfirmedOwner {
 	 * @param donID ID of the job to be invoked
 	 * @return requestId The ID of the sent request
 	 */
+
 	function sendRequestCBOR(
 		bytes memory request,
 		uint64 subscriptionId,
 		uint32 gasLimit,
 		bytes32 donID
 	) external onlyOwner returns (bytes32 requestId) {
-		s_lastRequestId = _sendRequest(request, subscriptionId, gasLimit, donID);
-		return s_lastRequestId;
+		requestId = _sendRequest(request, subscriptionId, gasLimit, donID);
+
+		s_lastRequestId = requestId;
+		pendingRequests[requestId] = true;
+
+		return requestId;
 	}
 
 	/// =========================
@@ -104,27 +73,156 @@ contract Consumer is FunctionsClient, ConfirmedOwner {
 	/// =========================
 
 	/**
+	 * @notice Send a request to the Chainlink Functions node
+	 * @param _params Parameters for the request
+	 * @param _proposals Proposals to be processed in the request
+	 * @return requestId The ID of the sent request
+	 */
+
+	function sendRequest(
+		SendRequestParams memory _params,
+		Proposal[] memory _proposals
+	) internal onlyOwner returns (bytes32 requestId) {
+		FunctionsRequest.Request memory req;
+
+		// 1. Build the Functions request
+		req.initializeRequestForInlineJavaScript(_params.source);
+		if (_params.encryptedSecretsUrls.length > 0)
+			req.addSecretsReference(_params.encryptedSecretsUrls);
+		else if (_params.donHostedSecretsVersion > 0) {
+			req.addDONHostedSecrets(
+				_params.donHostedSecretsSlotID,
+				_params.donHostedSecretsVersion
+			);
+		}
+		if (_params.args.length > 0) req.setArgs(_params.args);
+		if (_params.bytesArgs.length > 0) req.setBytesArgs(_params.bytesArgs);
+
+		// 2. Set the request parameters
+		requestId = _sendRequest(
+			req.encodeCBOR(),
+			_params.subscriptionId,
+			_params.gasLimit,
+			_params.donID
+		);
+
+		s_lastRequestId = requestId;
+		pendingRequests[requestId] = true;
+
+		// 3. Store the proposals in the pendingProposals mapping
+		for (uint256 i = 0; i < _proposals.length; ) {
+			pendingProposals[requestId].push(_proposals[i]);
+
+			for (uint256 j = 0; j < queue.length; ) {
+				if (
+					queue[j].dao == _proposals[i].dao &&
+					queue[j].proposalId == _proposals[i].proposalId
+				) {
+					queue[j] = queue[queue.length - 1];
+					queue.pop();
+					break;
+				}
+
+				unchecked {
+					j++;
+				}
+			}
+
+			unchecked {
+				i++;
+			}
+		}
+
+		return requestId;
+	}
+
+	/**
 	 * @notice Store latest result/error
 	 * @param requestId The request ID, returned by sendRequest()
 	 * @param response Aggregated response from the user code
 	 * @param err Aggregated error from the user code or from the execution pipeline
-	 * Either response or error parameter will be set, but never both
 	 */
+
 	function fulfillRequest(
 		bytes32 requestId,
 		bytes memory response,
 		bytes memory err
 	) internal override {
 		if (s_lastRequestId != requestId) {
-			revert UnexpectedRequestID(requestId);
+			revert UNEXPECTED_REQUEST_ID(requestId);
 		}
+
+		pendingRequests[requestId] = false;
+
 		s_lastResponse = response;
 		s_lastError = err;
 
-		// (string merkleRoots, ) = abi.decode(response, (string, ));
+		if (response.length > 0) {
+			string memory concatCIDs = abi.decode(response, (string));
+			string[] memory cids = splitByPipe(concatCIDs);
 
-		// IZKDAO(dao).setRoot(dao, daoId, proposalId, snapshot, voteToken);
+			Proposal[] memory lastProposals = pendingProposals[s_lastRequestId];
+
+			for (uint256 i = 0; i < lastProposals.length; i++) {
+				if (
+					!proposals[lastProposals[i].dao][lastProposals[i].proposalId].executed
+				) {
+					IGovernor(lastProposals[i].dao).setRoot(
+						lastProposals[i].proposalId,
+						cids[i]
+					);
+
+					proposals[lastProposals[i].dao][lastProposals[i].proposalId]
+						.executed = true;
+				}
+			}
+		}
 
 		emit Response(requestId, s_lastResponse, s_lastError);
+	}
+
+	/// =========================
+	/// === Helpers Functions ===
+	/// =========================
+
+	/**
+	 * @notice Split a string with "|" delimiter into an array of substrings
+	 * @param input The input string to split
+	 */
+
+	function splitByPipe(
+		string memory input
+	) public pure returns (string[] memory) {
+		bytes memory strBytes = bytes(input);
+		uint256 count = 1;
+
+		for (uint256 i = 0; i < strBytes.length; i++) {
+			if (strBytes[i] == '|') count++;
+		}
+
+		string[] memory parts = new string[](count);
+		uint256 lastIndex = 0;
+		uint256 partIndex = 0;
+
+		for (uint256 i = 0; i < strBytes.length; i++) {
+			if (strBytes[i] == '|') {
+				bytes memory part = new bytes(i - lastIndex);
+				for (uint256 j = lastIndex; j < i; j++) {
+					part[j - lastIndex] = strBytes[j];
+				}
+				parts[partIndex++] = string(part);
+				lastIndex = i + 1;
+			}
+		}
+
+		if (lastIndex < strBytes.length) {
+			bytes memory part = new bytes(strBytes.length - lastIndex);
+			for (uint256 j = lastIndex; j < strBytes.length; j++) {
+				part[j - lastIndex] = strBytes[j];
+			}
+			parts[partIndex] = string(part);
+		}
+
+		return parts;
 	}
 }

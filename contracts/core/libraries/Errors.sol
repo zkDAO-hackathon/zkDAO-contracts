@@ -16,6 +16,7 @@ contract Errors {
 	/// ======================
 
 	error DAO_NOT_FOUND(uint256 daoId);
+	error UNEXPECTED_REQUEST_ID(bytes32 requestId);
 
 	/// ======================
 	/// ====== Governor ======

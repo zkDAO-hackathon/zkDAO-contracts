@@ -1,42 +1,38 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import {IGovernor} from '../interfaces/IGovernor.sol';
+
 interface IConsumer {
-	/// =================================
-	/// == External / Public Functions ==
-	/// =================================
+	/// ======================
+	/// ======= Structs ======
+	/// ======================
 
-	/// @notice Send a JavaScript Functions request
-	/// @param source JavaScript source code
-	/// @param encryptedSecretsUrls Encrypted URLs to fetch user secrets
-	/// @param donHostedSecretsSlotID DON-hosted secrets slot ID
-	/// @param donHostedSecretsVersion DON-hosted secrets version
-	/// @param args List of string arguments
-	/// @param bytesArgs List of bytes arguments
-	/// @param subscriptionId Chainlink Functions billing subscription ID
-	/// @param gasLimit Maximum gas for the request
-	/// @param donID ID of the DON job
-	function sendRequest(
-		string memory source,
-		bytes memory encryptedSecretsUrls,
-		uint8 donHostedSecretsSlotID,
-		uint64 donHostedSecretsVersion,
-		string[] memory args,
-		bytes[] memory bytesArgs,
-		uint64 subscriptionId,
-		uint32 gasLimit,
-		bytes32 donID
-	) external returns (bytes32 requestId);
+	struct Proposal {
+		IGovernor dao;
+		uint256 daoId;
+		uint256 proposalId;
+		uint256 snapshot;
+		address voteToken;
+		bool queued;
+		bool executed;
+	}
 
-	/// @notice Send a CBOR-encoded Functions request
-	/// @param request CBOR-encoded data
-	/// @param subscriptionId Chainlink Functions billing subscription ID
-	/// @param gasLimit Maximum gas for the request
-	/// @param donID ID of the DON job
-	function sendRequestCBOR(
-		bytes memory request,
-		uint64 subscriptionId,
-		uint32 gasLimit,
-		bytes32 donID
-	) external returns (bytes32 requestId);
+	struct SendRequestParams {
+		string source; // JavaScript source code to execute
+		bytes encryptedSecretsUrls; // Encrypted URLs where to fetch user secrets
+		uint8 donHostedSecretsSlotID; // Don hosted secrets slot ID
+		uint64 donHostedSecretsVersion; // Don hosted secrets version
+		string[] args; // List of arguments accessible from within the source code
+		bytes[] bytesArgs; // Array of bytes arguments, represented as hex strings
+		uint64 subscriptionId; // Billing ID
+		uint32 gasLimit; // Array of bytes arguments, represented as hex strings
+		bytes32 donID; // Billing ID
+	}
+
+	/// ======================
+	/// ======= Events =======
+	/// ======================
+
+	event Response(bytes32 indexed requestId, bytes response, bytes err);
 }
