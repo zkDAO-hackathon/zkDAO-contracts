@@ -1,7 +1,13 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
+import { parseEther } from 'viem'
 
-import { developmentChains, networkConfig } from '@/config/constants'
+import {
+	developmentChains,
+	ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER,
+	ETHEREUM_SEPOLIA_LINK_TOKEN,
+	networkConfig
+} from '@/config/const'
 import { verify } from '@/utils/verify'
 
 const deployZkDao: DeployFunction = async function (
@@ -11,20 +17,20 @@ const deployZkDao: DeployFunction = async function (
 	const { deploy, log, get, save } = deployments
 	const { deployer, factory } = await getNamedAccounts()
 
-	const linkToken = await get('MockErc20')
 	const governorToken = await get('GovernorToken')
 	const timeLock = await get('TimeLock')
 	const governor = await get('Governor')
 	const verifier = await get('HonkVerifier')
 
 	log('----------------------------------------------------')
-	log('Deploying MockZKDAO and waiting for confirmations...')
+	log('Deploying ZKDAO and waiting for confirmations...')
 
-	const linkTokenAddress: string = linkToken.address
+	const linkTokenAddress: string = ETHEREUM_SEPOLIA_LINK_TOKEN
 	const governorTokenAddress: string = governorToken.address
 	const timeLockAddress: string = timeLock.address
 	const governorAddress: string = governor.address
 	const verifierAddress: string = verifier.address
+	const routerAddress: string = ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER
 
 	const args: string[] = [
 		governorTokenAddress,
@@ -32,41 +38,42 @@ const deployZkDao: DeployFunction = async function (
 		governorAddress,
 		verifierAddress,
 		linkTokenAddress,
+		routerAddress,
 		factory
 	]
 
-	const zkDao = await deploy('MockZKDAO', {
+	const zkDao = await deploy('ZKDAO', {
 		from: deployer,
 		args,
-		contract: 'MockZKDAO',
+		contract: 'ZKDAO',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	log(`MockZKDAO contract at ${zkDao.address}`)
+	log(`ZKDAO contract at ${zkDao.address}`)
 
 	if (!developmentChains.includes(network.name)) {
 		await verify(verifier.address, args)
 	}
 
-	const artifact = await deployments.getExtendedArtifact('MockZKDAO')
-	await save('MockZKDAO', {
+	const artifact = await deployments.getExtendedArtifact('ZKDAO')
+	await save('ZKDAO', {
 		address: zkDao.address,
 		...artifact
 	})
 
-	// log('----------------------------------------------------')
-	// log('Funding factory wallet with NATIVE token...')
+	log('----------------------------------------------------')
+	log('Funding factory wallet with NATIVE token...')
 
-	// const wallet = await hre.viem.getWalletClient(deployer)
+	const wallet = await hre.viem.getWalletClient(deployer)
 
-	// const transferNativeTokenTx = await wallet.sendTransaction({
-	// 	account: deployer,
-	// 	to: factory,
-	// 	value: parseEther('1')
-	// })
+	const transferNativeTokenTx = await wallet.sendTransaction({
+		account: deployer,
+		to: factory,
+		value: parseEther('0.1') // 0.01 ETH
+	})
 
-	// log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
+	log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
 }
 
 export default deployZkDao

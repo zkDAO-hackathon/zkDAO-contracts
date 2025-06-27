@@ -42,4 +42,4 @@ const deployGovernorToken: DeployFunction = async function (
 }
 
 export default deployGovernorToken
-deployGovernorToken.tags = ['ethereumSepolia', 'es-deploy', 'es-governorToken']
+deployGovernorToken.tags = ['avalancheFuji', 'af-deploy', 'af-governorToken']

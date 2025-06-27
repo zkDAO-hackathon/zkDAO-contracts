@@ -12,30 +12,29 @@ import { avalancheFuji, localhost, sepolia } from 'viem/chains'
 import { ensureEnvVar } from './utils/ensure-env-var'
 
 // Load environment variables
-dotenv.config({ path: `.env.${process.env.NODE_ENV}` })
 dotenv.config()
 
 const {
-	COINMARKETCAP_API_KEY,
 	SCAN_API_KEY,
-	GAS_REPORT,
-	RPC_HTTPS,
+	ETHEREUM_SEPOLIA_RPC_HTTPS,
+	AVALANCHE_FUJI_RPC_HTTPS,
 	STAGING_WALLET_PRIVATE_KEY,
 	STAGING_FACTORY_WALLET_PUBLIC_KEY,
 	STAGING_FACTORY_WALLET_PRIVATE_KEY
 } = process.env
 
 // Ensure environment variables
-const url = ensureEnvVar(RPC_HTTPS, 'RPC_HTTPS')
-
-const apiKey = ensureEnvVar(SCAN_API_KEY, 'SCAN_API_KEY')
-
-const coinmarketcap = ensureEnvVar(
-	COINMARKETCAP_API_KEY,
-	'COINMARKETCAP_API_KEY'
+const ethereumSepoliaUrl = ensureEnvVar(
+	ETHEREUM_SEPOLIA_RPC_HTTPS,
+	'ETHEREUM_SEPOLIA_RPC_HTTPS'
 )
 
-const enabled = GAS_REPORT === 'true' ? true : false
+const avalancheFujiUrl = ensureEnvVar(
+	AVALANCHE_FUJI_RPC_HTTPS,
+	'AVALANCHE_FUJI_RPC_HTTPS'
+)
+
+const apiKey = ensureEnvVar(SCAN_API_KEY, 'SCAN_API_KEY')
 
 const walletPrivateKey = ensureEnvVar(
 	STAGING_WALLET_PRIVATE_KEY,
@@ -80,12 +79,12 @@ const config: HardhatUserConfig = {
 			chainId: localhost.id
 		},
 		ethereumSepolia: {
-			url,
+			url: ethereumSepoliaUrl,
 			accounts,
 			chainId: sepolia.id
 		},
 		avalancheFuji: {
-			url,
+			url: avalancheFujiUrl,
 			accounts,
 			chainId: avalancheFuji.id
 		}
@@ -132,41 +131,7 @@ const config: HardhatUserConfig = {
 	},
 
 	etherscan: {
-		apiKey,
-		customChains: [
-			{
-				network: 'celo',
-				chainId: 42220,
-				urls: {
-					apiURL: 'https://api.etherscan.io/v2/api?chainid=42220',
-					browserURL: 'https://celoscan.io'
-				}
-			},
-			{
-				network: 'celoAlfajores',
-				chainId: 44787,
-				urls: {
-					apiURL: 'https://api.etherscan.io/v2/api?chainid=44787',
-					browserURL: 'https://alfajores.celoscan.io'
-				}
-			}
-		]
-	},
-
-	gasReporter: {
-		enabled,
-		coinmarketcap,
-		currency: 'USD',
-		currencyDisplayPrecision: 5,
-		token: 'CELO',
-		tokenPrice: '0.4',
-		gasPrice: 0.5,
-		offline: true,
-		includeIntrinsicGas: true,
-		reportFormat: 'terminal',
-		darkMode: true,
-		showMethodSig: true,
-		outputFile: 'gas-report.txt'
+		apiKey
 	},
 
 	typechain: {

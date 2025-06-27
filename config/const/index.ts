@@ -26,7 +26,19 @@ export const NATIVE: Address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
 // Ethreum Sepolia
 
+export const ETHEREUM_SEPOLIA_LINK_TOKEN: Address =
+	'0x779877A7B0D9E8603169DdbD7836e478b4624789' // Sepolia LINK token address
+
+export const ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER: Address =
+	'0xb83E47C2bC239B3bf370bc41e1459A34b41238D0' // Sepolia Function Router address
+
 // Avalanche Fuji
+
+export const AVALANCHE_FUJI_LINK_TOKEN: Address =
+	'0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846' // Fuji LINK token address
+
+export const AVALANCHE_FUJI_FUNCTIONS_ROUTER: Address =
+	'0xA9d587a00A31A52Ed70D6026794a8FC5E2F5dCb0' // Fuji Function Router address
 
 // Args
 

@@ -5,7 +5,7 @@ import { stringToHex } from 'viem'
 import { developmentChains, networkConfig } from '@/config/const'
 import { verify } from '@/utils/verify'
 
-const deployGovernorToken: DeployFunction = async function (
+const deployGovernor: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
@@ -13,33 +13,33 @@ const deployGovernorToken: DeployFunction = async function (
 	const { deployer } = await getNamedAccounts()
 
 	log('----------------------------------------------------')
-	log('Deploying GovernorToken and waiting for confirmations...')
+	log('Deploying Governor and waiting for confirmations...')
 
 	const args: string[] = []
 
-	const deterministic = await deployments.deterministic('GovernorToken', {
+	const deterministic = await deployments.deterministic('Governor', {
 		from: deployer,
 		args,
-		deterministicDeployment: stringToHex('governor-token-v1'),
-		contract: 'GovernorToken',
+		deterministicDeployment: stringToHex('governor-v1'),
+		contract: 'Governor',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
-	const governorToken = await deterministic.deploy()
+	const governor = await deterministic.deploy()
 
-	log(`GovernorToken contract at ${governorToken.address}`)
+	log(`Governor contract at ${governor.address}`)
 
 	if (!developmentChains.includes(network.name)) {
-		await verify(governorToken.address, args)
+		await verify(governor.address, args)
 	}
 
-	const artifact = await deployments.getExtendedArtifact('GovernorToken')
-	await save('GovernorToken', {
-		address: governorToken.address,
+	const artifact = await deployments.getExtendedArtifact('Governor')
+	await save('Governor', {
+		address: governor.address,
 		...artifact
 	})
 }
 
-export default deployGovernorToken
-deployGovernorToken.tags = ['ethereumSepolia', 'es-deploy', 'es-governorToken']
+export default deployGovernor
+deployGovernor.tags = ['avalancheFuji', 'af-deploy', 'af-governor']

@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { stringToHex } from 'viem'
 
-import { developmentChains, networkConfig } from '@/config/constants'
+import { developmentChains, networkConfig } from '@/config/const'
 import { verify } from '@/utils/verify'
 
 const deployGovernorToken: DeployFunction = async function (
