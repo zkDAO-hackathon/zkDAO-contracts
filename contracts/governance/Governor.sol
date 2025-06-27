@@ -17,8 +17,6 @@ import {IGovernor} from '../core/interfaces/IGovernor.sol';
 import {IZKDAO} from '../core/interfaces/IZKDAO.sol';
 import {Errors} from '../core/libraries/Errors.sol';
 
-import 'hardhat/console.sol';
-
 contract Governor is
 	Initializable,
 	GovernorUpgradeable,
@@ -213,11 +211,11 @@ contract Governor is
 		address[] memory targets,
 		uint256[] memory values,
 		bytes[] memory calldatas,
-		string memory description
+		string memory _description
 	) public override(GovernorUpgradeable, IGovernor) returns (uint256) {
 		address proposer = _msgSender();
 
-		if (!_isValidDescriptionForProposer(proposer, description)) {
+		if (!_isValidDescriptionForProposer(proposer, _description)) {
 			revert GovernorRestrictedProposer(proposer);
 		}
 
@@ -240,10 +238,6 @@ contract Governor is
 			description,
 			proposer
 		);
-
-		console.log(' Proposal created with ID:', proposalId);
-		console.log(' Snapshot block:', proposalSnapshot(proposalId));
-		console.log(' Description:', description);
 
 		uint256 snapshot = proposalSnapshot(proposalId);
 
@@ -279,17 +273,6 @@ contract Governor is
 			} else {
 				revert('GovernorVotingSimple: invalid value for enum VoteType');
 			}
-
-			console.log(
-				'ZK Vote counted for proposal %s: %s votes %s',
-				proposalId,
-				weight,
-				support == uint8(VoteType.Against)
-					? 'Against'
-					: support == uint8(VoteType.For)
-					? 'For'
-					: 'Abstain'
-			);
 
 			return weight;
 		}
