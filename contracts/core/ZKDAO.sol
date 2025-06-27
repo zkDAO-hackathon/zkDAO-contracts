@@ -8,16 +8,12 @@ import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable
 
 import {IGovernor} from './interfaces/IGovernor.sol';
 import {IGovernorToken} from './interfaces/IGovernorToken.sol';
-import {IQueueProposalState} from './interfaces/IQueueProposalState.sol';
 import {ITimeLock} from './interfaces/ITimeLock.sol';
 import {IVerifier} from './Verifier.sol';
-import {Consumer} from './Consumer.sol';
 import {QueueProposalState} from './QueueProposalState.sol';
 import {Transfer} from './libraries/Transfer.sol';
 import {Errors} from './libraries/Errors.sol';
 import {Clone} from './libraries/Clone.sol';
-
-import 'hardhat/console.sol';
 
 contract ZKDAO is QueueProposalState, Transfer {
 	/// ======================
@@ -85,6 +81,8 @@ contract ZKDAO is QueueProposalState, Transfer {
 		uint256 value
 	);
 
+	receive() external payable {}
+
 	constructor(
 		address _governorToken,
 		address _timelock,
@@ -111,12 +109,46 @@ contract ZKDAO is QueueProposalState, Transfer {
 		_;
 	}
 
+	modifier onlyZkDaos() {
+		uint256 daoId = daoIds[msg.sender];
+		if (daoId == 0) {
+			revert DAO_NOT_FOUND(daoId);
+		}
+
+		if (daos[daoId].governor != IGovernor(msg.sender)) {
+			revert UNAUTHORIZED();
+		}
+		_;
+	}
+
 	/// ==========================
 	/// ===== View Functions =====
 	/// ==========================
 
 	function getDao(uint256 id) external view returns (DAO memory dao) {
 		return daos[id];
+	}
+
+	function getImplementations()
+		external
+		view
+		returns (
+			address _governorToken,
+			address _timelock,
+			address _governor,
+			address _verifier
+		)
+	{
+		return (
+			address(governorToken),
+			address(timelock),
+			address(governor),
+			address(verifier)
+		);
+	}
+
+	function getNonce(address account) external view returns (uint256) {
+		return nonces[account];
 	}
 
 	/// =================================
@@ -152,7 +184,6 @@ contract ZKDAO is QueueProposalState, Transfer {
 	}
 
 	function createDao(
-		address _creator,
 		GovernorTokenParams calldata _tokenParams,
 		uint256 _minDelay,
 		GovernorParams calldata _governorParams,
@@ -211,8 +242,6 @@ contract ZKDAO is QueueProposalState, Transfer {
 		IGovernorToken(governorClone).mintBatch(_to, _amounts);
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
 
-		console.log('Creating DAO with ID:', id);
-
 		// Save DAO data
 		daos[id] = DAO({
 			token: IGovernorToken(tokenClone),
@@ -222,6 +251,15 @@ contract ZKDAO is QueueProposalState, Transfer {
 		});
 
 		emit DaoCreated(id, msg.sender, tokenClone, timelockClone, governorClone);
+	}
+
+	function queueProposal(
+		uint256 daoId,
+		uint256 proposalId,
+		uint256 snapshot,
+		address voteToken
+	) external onlyZkDaos {
+		_queueProposal(daoId, proposalId, snapshot, voteToken);
 	}
 
 	/// =========================
