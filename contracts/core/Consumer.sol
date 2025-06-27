@@ -5,12 +5,43 @@ import {FunctionsClient} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/Fu
 import {ConfirmedOwner} from '@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol';
 import {FunctionsRequest} from '@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol';
 
-import {IConsumer} from './interfaces/IConsumer.sol';
-import {IGovernor} from './interfaces/IConsumer.sol';
+import {IGovernor} from '../core/interfaces/IGovernor.sol';
 import {Errors} from '../core/libraries/Errors.sol';
 
-contract Consumer is FunctionsClient, ConfirmedOwner, IConsumer, Errors {
+contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 	using FunctionsRequest for FunctionsRequest.Request;
+
+	/// ======================
+	/// ======= Structs ======
+	/// ======================
+
+	struct Proposal {
+		IGovernor dao;
+		uint256 daoId;
+		uint256 proposalId;
+		uint256 snapshot;
+		address voteToken;
+		bool queued;
+		bool executed;
+	}
+
+	struct SendRequestParams {
+		string source; // JavaScript source code to execute
+		bytes encryptedSecretsUrls; // Encrypted URLs where to fetch user secrets
+		uint8 donHostedSecretsSlotID; // Don hosted secrets slot ID
+		uint64 donHostedSecretsVersion; // Don hosted secrets version
+		string[] args; // List of arguments accessible from within the source code
+		bytes[] bytesArgs; // Array of bytes arguments, represented as hex strings
+		uint64 subscriptionId; // Billing ID
+		uint32 gasLimit; // Array of bytes arguments, represented as hex strings
+		bytes32 donID; // Billing ID
+	}
+
+	/// ======================
+	/// ======= Events =======
+	/// ======================
+
+	event Response(bytes32 indexed requestId, bytes response, bytes err);
 
 	/// =========================
 	/// === Storage Variables ===
@@ -163,7 +194,7 @@ contract Consumer is FunctionsClient, ConfirmedOwner, IConsumer, Errors {
 
 			Proposal[] memory lastProposals = pendingProposals[s_lastRequestId];
 
-			for (uint256 i = 0; i < lastProposals.length; i++) {
+			for (uint256 i = 0; i < lastProposals.length; ) {
 				if (
 					!proposals[lastProposals[i].dao][lastProposals[i].proposalId].executed
 				) {
@@ -174,6 +205,10 @@ contract Consumer is FunctionsClient, ConfirmedOwner, IConsumer, Errors {
 
 					proposals[lastProposals[i].dao][lastProposals[i].proposalId]
 						.executed = true;
+				}
+
+				unchecked {
+					i++;
 				}
 			}
 		}
@@ -196,29 +231,44 @@ contract Consumer is FunctionsClient, ConfirmedOwner, IConsumer, Errors {
 		bytes memory strBytes = bytes(input);
 		uint256 count = 1;
 
-		for (uint256 i = 0; i < strBytes.length; i++) {
+		for (uint256 i = 0; i < strBytes.length; ) {
 			if (strBytes[i] == '|') count++;
+
+			unchecked {
+				i++;
+			}
 		}
 
 		string[] memory parts = new string[](count);
 		uint256 lastIndex = 0;
 		uint256 partIndex = 0;
 
-		for (uint256 i = 0; i < strBytes.length; i++) {
+		for (uint256 i = 0; i < strBytes.length; ) {
 			if (strBytes[i] == '|') {
 				bytes memory part = new bytes(i - lastIndex);
-				for (uint256 j = lastIndex; j < i; j++) {
+				for (uint256 j = lastIndex; j < i; ) {
 					part[j - lastIndex] = strBytes[j];
+
+					unchecked {
+						j++;
+					}
 				}
 				parts[partIndex++] = string(part);
 				lastIndex = i + 1;
+			}
+			unchecked {
+				i++;
 			}
 		}
 
 		if (lastIndex < strBytes.length) {
 			bytes memory part = new bytes(strBytes.length - lastIndex);
-			for (uint256 j = lastIndex; j < strBytes.length; j++) {
+			for (uint256 j = lastIndex; j < strBytes.length; ) {
 				part[j - lastIndex] = strBytes[j];
+
+				unchecked {
+					j++;
+				}
 			}
 			parts[partIndex] = string(part);
 		}
