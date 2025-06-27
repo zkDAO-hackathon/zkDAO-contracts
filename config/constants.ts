@@ -10,10 +10,10 @@ export const networkConfig: NetworkConfigInfo = {
 	localhost: {},
 	hardhat: {},
 	ethereumSepolia: {
-		blockConfirmations: 6
+		blockConfirmations: 3
 	},
 	avalancheFuji: {
-		blockConfirmations: 6
+		blockConfirmations: 3
 	}
 }
 

@@ -1,6 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
-import { parseEther, stringToHex } from 'viem'
 
 import { developmentChains, networkConfig } from '@/config/constants'
 import { verify } from '@/utils/verify'
@@ -9,7 +8,7 @@ const deployZkDao: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
-	const { log, get, save } = deployments
+	const { deploy, log, get, save } = deployments
 	const { deployer, factory } = await getNamedAccounts()
 
 	const linkToken = await get('MockErc20')
@@ -36,11 +35,10 @@ const deployZkDao: DeployFunction = async function (
 		factory
 	]
 
-	const zkDao = await deployments.deterministic('MockZKDAO', {
+	const zkDao = await deploy('MockZKDAO', {
 		from: deployer,
 		args,
 		contract: 'MockZKDAO',
-		deterministicDeployment: stringToHex('mock-zk-dao-v1'),
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
@@ -57,19 +55,19 @@ const deployZkDao: DeployFunction = async function (
 		...artifact
 	})
 
-	log('----------------------------------------------------')
-	log('Funding factory wallet with NATIVE token...')
+	// log('----------------------------------------------------')
+	// log('Funding factory wallet with NATIVE token...')
 
-	const wallet = await hre.viem.getWalletClient(deployer)
+	// const wallet = await hre.viem.getWalletClient(deployer)
 
-	const transferNativeTokenTx = await wallet.sendTransaction({
-		account: deployer,
-		to: factory,
-		value: parseEther('1')
-	})
+	// const transferNativeTokenTx = await wallet.sendTransaction({
+	// 	account: deployer,
+	// 	to: factory,
+	// 	value: parseEther('1')
+	// })
 
-	log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
+	// log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
 }
 
 export default deployZkDao
-deployZkDao.tags = ['ethereumSepolia', 'es-deploy', 'es-mockZkDao']
+deployZkDao.tags = ['ethereumSepolia', 'es-deploy', 'es-ZKDAO']

@@ -1,8 +1,5 @@
 // utils/verify.ts
 import { run } from 'hardhat'
-import { ethers } from 'hardhat'
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export const verify = async (
 	contractAddress: string,
@@ -11,19 +8,8 @@ export const verify = async (
 	console.log('Verifying contract...')
 
 	try {
-		// Primero verificar que el contrato tiene bytecode
-		const code = await ethers.provider.getCode(contractAddress)
-		if (code === '0x' || code === '0x0') {
-			console.log('❌ Contract has no bytecode at address:', contractAddress)
-			console.log('Contract may not have been deployed properly')
-			return
-		}
+		console.log('⏳ Waiting 9 seconds for Etherscan to index the contract...')
 
-		// Esperar un poco para que Etherscan procese el despliegue
-		console.log('⏳ Waiting 30 seconds for Etherscan to index the contract...')
-		await delay(30000) // 30 segundos
-
-		// Intentar verificar
 		await run('verify:verify', {
 			address: contractAddress,
 			constructorArguments: args

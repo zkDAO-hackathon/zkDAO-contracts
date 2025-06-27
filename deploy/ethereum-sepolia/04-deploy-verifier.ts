@@ -17,7 +17,7 @@ const deployVerifier: DeployFunction = async function (
 
 	const args: string[] = []
 
-	const verifier = await deployments.deterministic('HonkVerifier', {
+	const deterministic = await deployments.deterministic('HonkVerifier', {
 		from: deployer,
 		args,
 		deterministicDeployment: stringToHex('verifier-v1'),
@@ -25,6 +25,8 @@ const deployVerifier: DeployFunction = async function (
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
+
+	const verifier = await deterministic.deploy()
 
 	log(`Verifier contract at ${verifier.address}`)
 

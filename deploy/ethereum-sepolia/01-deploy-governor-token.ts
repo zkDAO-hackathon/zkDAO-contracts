@@ -1,4 +1,3 @@
-// deploy/ethereumSepolia/01-deploy-governor-token.ts
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { stringToHex } from 'viem'
@@ -10,31 +9,15 @@ const deployGovernorToken: DeployFunction = async function (
 	hre: HardhatRuntimeEnvironment
 ) {
 	const { getNamedAccounts, deployments, network } = hre
-	const { deploy, log, getOrNull } = deployments
+	const { log, save } = deployments
 	const { deployer } = await getNamedAccounts()
-
-	// Verificar si ya está desplegado
-	const existing = await getOrNull('GovernorToken')
-	if (existing) {
-		log(`GovernorToken already deployed at ${existing.address}`)
-
-		// Verificar si tiene bytecode
-		const code = await hre.ethers.provider.getCode(existing.address)
-		if (code === '0x' || code === '0x0') {
-			log('⚠️  Warning: Deployment exists but has no bytecode!')
-			log('Removing invalid deployment and redeploying...')
-			await deployments.delete('GovernorToken')
-		} else {
-			return // Ya está desplegado correctamente
-		}
-	}
 
 	log('----------------------------------------------------')
 	log('Deploying GovernorToken and waiting for confirmations...')
 
 	const args: string[] = []
 
-	const governorToken = await deploy('GovernorToken', {
+	const deterministic = await deployments.deterministic('GovernorToken', {
 		from: deployer,
 		args,
 		deterministicDeployment: stringToHex('governor-token-v1'),
@@ -43,10 +26,19 @@ const deployGovernorToken: DeployFunction = async function (
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
 
+	const governorToken = await deterministic.deploy()
+
+	log(`GovernorToken contract at ${governorToken.address}`)
+
 	if (!developmentChains.includes(network.name)) {
-		log('⏳ Verifying...')
 		await verify(governorToken.address, args)
 	}
+
+	const artifact = await deployments.getExtendedArtifact('GovernorToken')
+	await save('GovernorToken', {
+		address: governorToken.address,
+		...artifact
+	})
 }
 
 export default deployGovernorToken
