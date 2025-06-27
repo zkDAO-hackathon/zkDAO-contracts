@@ -17,6 +17,27 @@ import {Clone} from './libraries/Clone.sol';
 
 contract ZKDAO is QueueProposalState, Transfer {
 	/// ======================
+	/// ======= Events =======
+	/// ======================
+
+	event DaoCreated(
+		uint256 indexed id,
+		address indexed deployer,
+		address token,
+		address timelock,
+		address governor
+	);
+
+	event PaidForDaoCreation(
+		GovernorTokenParams tokenParams,
+		uint256 minDelay,
+		GovernorParams governorParams,
+		address[] to,
+		uint256[] amounts,
+		uint256 value
+	);
+
+	/// ======================
 	/// ======= Structs ======
 	/// ======================
 
@@ -46,40 +67,19 @@ contract ZKDAO is QueueProposalState, Transfer {
 	/// === Storage Variables ===
 	/// =========================
 
+	uint256 private price = 5 ether; // Price to create a DAO in LINK tokens
+	uint256 private daoCounter;
+
+	address private factory;
+	IERC20 private linkToken;
+	IGovernorToken private governorToken;
+	ITimeLock private timelock;
+	IVerifier private verifier;
+	IGovernor private governor;
+
 	mapping(address => uint256) private nonces;
+	mapping(address => uint256) private daoIds;
 	mapping(uint256 => DAO) private daos;
-	mapping(address => uint256) public daoIds;
-
-	uint256 public price = 5 ether; // Price in LINK tokens for creating a DAO
-	uint256 public daoIdCounter;
-
-	address public factory;
-	IGovernorToken public governorToken;
-	ITimeLock public timelock;
-	IVerifier public verifier;
-	IGovernor public governor;
-	IERC20 public linkToken;
-
-	/// ======================
-	/// ======= Events =======
-	/// ======================
-
-	event DaoCreated(
-		uint256 indexed id,
-		address indexed deployer,
-		address token,
-		address timelock,
-		address governor
-	);
-
-	event PaidForDaoCreation(
-		GovernorTokenParams tokenParams,
-		uint256 minDelay,
-		GovernorParams governorParams,
-		address[] to,
-		uint256[] amounts,
-		uint256 value
-	);
 
 	receive() external payable {}
 
@@ -90,8 +90,12 @@ contract ZKDAO is QueueProposalState, Transfer {
 		address _verifier,
 		address _router,
 		address _linkAddress,
-		address _factory
-	) QueueProposalState(_router) {
+		address _factory,
+		uint64 _subscriptionId,
+		uint32 _gasLimit,
+		bytes32 _donID,
+		string memory _source
+	) QueueProposalState(_router, _subscriptionId, _gasLimit, _donID, _source) {
 		governorToken = IGovernorToken(_governorToken);
 		timelock = ITimeLock(_timelock);
 		governor = IGovernor(_governor);
@@ -122,17 +126,23 @@ contract ZKDAO is QueueProposalState, Transfer {
 	}
 
 	/// ==========================
-	/// ===== View Functions =====
+	/// === External Functions ===
 	/// ==========================
 
-	function getDao(uint256 id) external view returns (DAO memory dao) {
-		return daos[id];
+	function getPrice() external view returns (uint256) {
+		return price;
+	}
+
+	function getDaoCounter() external view returns (uint256) {
+		return daoCounter;
 	}
 
 	function getImplementations()
 		external
 		view
 		returns (
+			address _factory,
+			address _linkToken,
 			address _governorToken,
 			address _timelock,
 			address _governor,
@@ -140,6 +150,8 @@ contract ZKDAO is QueueProposalState, Transfer {
 		)
 	{
 		return (
+			factory,
+			address(linkToken),
 			address(governorToken),
 			address(timelock),
 			address(governor),
@@ -151,9 +163,13 @@ contract ZKDAO is QueueProposalState, Transfer {
 		return nonces[account];
 	}
 
-	/// =================================
-	/// == External / Public Functions ==
-	/// =================================
+	function getDaoId(address account) external view returns (uint256) {
+		return daoIds[account];
+	}
+
+	function getDao(uint256 id) external view returns (DAO memory dao) {
+		return daos[id];
+	}
 
 	function payForDaoCreation(
 		GovernorTokenParams calldata _tokenParams,
@@ -191,7 +207,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 		uint256[] calldata _amounts
 	) external onlyFactory {
 		uint256 baseNonce = ++nonces[msg.sender];
-		uint256 id = ++daoIdCounter;
+		uint256 id = ++daoCounter;
 
 		address tokenClone = Clone.createClone(
 			address(governorToken),
@@ -238,11 +254,9 @@ contract ZKDAO is QueueProposalState, Transfer {
 			address(this)
 		);
 
-		// TODO: add eth to pay for gas fees
 		IGovernorToken(governorClone).mintBatch(_to, _amounts);
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
 
-		// Save DAO data
 		daos[id] = DAO({
 			token: IGovernorToken(tokenClone),
 			timelock: ITimeLock(timelockClone),
@@ -263,13 +277,13 @@ contract ZKDAO is QueueProposalState, Transfer {
 	}
 
 	/// =========================
-	/// == Internal Functions ===
+	/// == Private Functions ====
 	/// =========================
 
 	function _initializeToken(
 		address tokenClone,
 		GovernorTokenParams calldata tokenParams
-	) internal {
+	) private {
 		IGovernorToken(tokenClone).initialize(
 			tokenParams.name,
 			tokenParams.symbol,
@@ -280,7 +294,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 	function _initializeTimelock(
 		address timelockClone,
 		uint256 minDelay
-	) internal {
+	) private {
 		ITimeLock(timelockClone).initialize(
 			minDelay,
 			new address[](0),
@@ -296,7 +310,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 		IVerifier _verifier,
 		GovernorParams calldata governorParams,
 		uint256 id
-	) internal {
+	) private {
 		// Convert calldata struct to memory struct for compatibility
 		IGovernor.GovernorInitParams memory memoryParams = IGovernor
 			.GovernorInitParams({
@@ -314,4 +328,6 @@ contract ZKDAO is QueueProposalState, Transfer {
 
 		IGovernor(_governorClone).initialize(memoryParams, _verifier);
 	}
+
+	/// @notice Group functions
 }

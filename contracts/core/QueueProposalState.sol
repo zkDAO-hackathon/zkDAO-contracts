@@ -31,10 +31,16 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 	/// ====== Constructor ======
 	/// =========================
 
-	constructor(address _router) Consumer(_router) {}
+	constructor(
+		address _router,
+		uint64 _subscriptionId,
+		uint32 _gasLimit,
+		bytes32 _donID,
+		string memory _source
+	) Consumer(_router, _subscriptionId, _gasLimit, _donID, _source) {}
 
 	/// ==========================
-	/// ===== View Functions =====
+	/// === External Functions ===
 	/// ==========================
 
 	function checkUpkeep(
@@ -86,10 +92,6 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		upkeepNeeded = true;
 	}
 
-	/// =================================
-	/// == External / Public Functions ==
-	/// =================================
-
 	function performUpkeep(bytes calldata performData) external override {
 		Proposal[] memory proposalsToProcess = abi.decode(
 			performData,
@@ -124,15 +126,15 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 				string memory serialized = string(
 					abi.encodePacked(
 						'dao=',
-						toAsciiString(address(p.dao)),
+						_toAsciiString(address(p.dao)),
 						';daoId=',
-						uintToString(p.daoId),
+						_uintToString(p.daoId),
 						';proposalId=',
-						uintToString(p.proposalId),
+						_uintToString(p.proposalId),
 						';snapshot=',
-						uintToString(p.snapshot),
+						_uintToString(p.snapshot),
 						';voteToken=',
-						toAsciiString(p.voteToken)
+						_toAsciiString(p.voteToken)
 					)
 				);
 
@@ -156,23 +158,26 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		}
 
 		if (validCount > 0) {
-			// TODO: Replace with actual request to Chainlink Functions
 			sendRequest(
 				SendRequestParams({
-					source: 'queueProposal',
-					encryptedSecretsUrls: bytes(''), // No secrets in this mock
-					donHostedSecretsSlotID: 0, // No DON secrets in this mock
-					donHostedSecretsVersion: 0, // No DON secrets in this mock
+					source: source,
+					encryptedSecretsUrls: '0x',
+					donHostedSecretsSlotID: 0,
+					donHostedSecretsVersion: 0,
 					args: args,
-					bytesArgs: new bytes[](0), // No bytes args in this mock
-					subscriptionId: 0, // No subscription in this mock
-					gasLimit: 100000, // Arbitrary gas limit for the mock
-					donID: bytes32(0) // No DON ID in this mock
+					bytesArgs: new bytes[](0),
+					subscriptionId: subscriptionId,
+					gasLimit: gasLimit,
+					donID: donID
 				}),
 				validProposals
 			);
 		}
 	}
+
+	/// ==========================
+	/// === Internal Functions ===
+	/// ==========================
 
 	function _queueProposal(
 		uint256 _daoId,
@@ -195,11 +200,11 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		emit ProposalQueued(msg.sender, _daoId, _proposalId, _snapshot, voteToken);
 	}
 
-	/// =========================
-	/// === Helpers Functions ===
-	/// =========================
+	/// ==========================
+	/// === Private Functions ====
+	/// ==========================
 
-	function uintToString(uint256 v) internal pure returns (string memory) {
+	function _uintToString(uint256 v) private pure returns (string memory) {
 		if (v == 0) return '0';
 		uint256 digits;
 		uint256 temp = v;
@@ -216,7 +221,7 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		return string(buffer);
 	}
 
-	function toAsciiString(address x) internal pure returns (string memory) {
+	function _toAsciiString(address x) private pure returns (string memory) {
 		bytes memory s = new bytes(42);
 		s[0] = '0';
 		s[1] = 'x';

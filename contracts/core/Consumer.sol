@@ -12,56 +12,59 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 	using FunctionsRequest for FunctionsRequest.Request;
 
 	/// ======================
-	/// ======= Structs ======
-	/// ======================
-
-	struct Proposal {
-		IGovernor dao;
-		uint256 daoId;
-		uint256 proposalId;
-		uint256 snapshot;
-		address voteToken;
-		bool queued;
-		bool executed;
-	}
-
-	struct SendRequestParams {
-		string source; // JavaScript source code to execute
-		bytes encryptedSecretsUrls; // Encrypted URLs where to fetch user secrets
-		uint8 donHostedSecretsSlotID; // Don hosted secrets slot ID
-		uint64 donHostedSecretsVersion; // Don hosted secrets version
-		string[] args; // List of arguments accessible from within the source code
-		bytes[] bytesArgs; // Array of bytes arguments, represented as hex strings
-		uint64 subscriptionId; // Billing ID
-		uint32 gasLimit; // Array of bytes arguments, represented as hex strings
-		bytes32 donID; // Billing ID
-	}
-
-	/// ======================
 	/// ======= Events =======
 	/// ======================
 
 	event Response(bytes32 indexed requestId, bytes response, bytes err);
 
+	/// ======================
+	/// ======= Structs ======
+	/// ======================
+
+	struct Proposal {
+		IGovernor dao;
+		address voteToken;
+		uint256 daoId;
+		uint256 proposalId;
+		uint256 snapshot;
+		bool queued;
+		bool executed;
+		// 30 bytes free for future use
+	}
+
+	struct SendRequestParams {
+		string source;
+		bytes encryptedSecretsUrls;
+		uint8 donHostedSecretsSlotID;
+		uint64 donHostedSecretsVersion;
+		string[] args;
+		bytes[] bytesArgs;
+		uint64 subscriptionId;
+		uint32 gasLimit;
+		bytes32 donID;
+	}
+
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
 
-	bytes32 public s_lastRequestId;
+	uint64 internal subscriptionId; // 8 bytes
+	uint32 internal gasLimit; // 4 bytes
+	// 20 bytes free for future use
+
+	bytes32 internal donID; // 32 bytes
+	bytes32 public s_lastRequestId; // 32 bytes
+	uint256 private requestCounter; // 32 bytes
+
+	Proposal[] internal queue; // 32 bytes + 20 bytes free for future use
 	bytes public s_lastResponse;
 	bytes public s_lastError;
 
-	Proposal[] internal queue;
-
-	uint256 private requestCounter;
+	string public source;
 
 	// daoId => proposalId => Proposal
 	mapping(IGovernor => mapping(uint256 => Proposal)) internal proposals;
 	mapping(bytes32 => Proposal[]) private pendingProposals;
-
-	// Mock storage for simulating responses
-	mapping(bytes32 => bytes) private mockResponses;
-	mapping(bytes32 => bytes) private mockErrors;
 	mapping(bytes32 => bool) private pendingRequests;
 
 	/// =========================
@@ -69,29 +72,58 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 	/// =========================
 
 	constructor(
-		address _router
-	) FunctionsClient(_router) ConfirmedOwner(msg.sender) {}
+		address _router,
+		uint64 _subscriptionId,
+		uint32 _gasLimit,
+		bytes32 _donID,
+		string memory _source
+	) FunctionsClient(_router) ConfirmedOwner(msg.sender) {
+		subscriptionId = _subscriptionId;
+		gasLimit = _gasLimit;
+		donID = _donID;
+		source = _source;
+	}
 
-	/// =================================
-	/// == External / Public Functions ==
-	/// =================================
+	/// ==========================
+	/// === External Functions ===
+	/// ==========================
+
+	function getSubscriptionId() external view returns (uint64) {
+		return subscriptionId;
+	}
+
+	function getGasLimit() external view returns (uint32) {
+		return gasLimit;
+	}
+
+	function getDonID() external view returns (bytes32) {
+		return donID;
+	}
+
+	function getRequestCounter() external view returns (uint256) {
+		return requestCounter;
+	}
+
+	function getQueue() external view returns (Proposal[] memory) {
+		return queue;
+	}
 
 	/**
 	 * @notice Send a pre-encoded CBOR request
-	 * @param request CBOR-encoded request data
-	 * @param subscriptionId Billing ID
-	 * @param gasLimit The maximum amount of gas the request can consume
-	 * @param donID ID of the job to be invoked
+	 * @param _request CBOR-encoded request data
+	 * @param _subscriptionId Billing ID
+	 * @param _gasLimit The maximum amount of gas the request can consume
+	 * @param _donID ID of the job to be invoked
 	 * @return requestId The ID of the sent request
 	 */
 
 	function sendRequestCBOR(
-		bytes memory request,
-		uint64 subscriptionId,
-		uint32 gasLimit,
-		bytes32 donID
+		bytes memory _request,
+		uint64 _subscriptionId,
+		uint32 _gasLimit,
+		bytes32 _donID
 	) external onlyOwner returns (bytes32 requestId) {
-		requestId = _sendRequest(request, subscriptionId, gasLimit, donID);
+		requestId = _sendRequest(_request, _subscriptionId, _gasLimit, _donID);
 
 		s_lastRequestId = requestId;
 		pendingRequests[requestId] = true;
@@ -190,7 +222,7 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 
 		if (response.length > 0) {
 			string memory concatCIDs = abi.decode(response, (string));
-			string[] memory cids = splitByPipe(concatCIDs);
+			string[] memory cids = _splitByPipe(concatCIDs);
 
 			Proposal[] memory lastProposals = pendingProposals[s_lastRequestId];
 
@@ -216,18 +248,34 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 		emit Response(requestId, s_lastResponse, s_lastError);
 	}
 
-	/// =========================
-	/// === Helpers Functions ===
-	/// =========================
+	function setSubscriptionId(uint64 _subscriptionId) external onlyOwner {
+		subscriptionId = _subscriptionId;
+	}
+
+	function setGasLimit(uint32 _gasLimit) external onlyOwner {
+		gasLimit = _gasLimit;
+	}
+
+	function setDonID(bytes32 _donID) external onlyOwner {
+		donID = _donID;
+	}
+
+	function setSource(string memory _source) external onlyOwner {
+		source = _source;
+	}
+
+	/// ==========================
+	/// === Private Functions ====
+	/// ==========================
 
 	/**
 	 * @notice Split a string with "|" delimiter into an array of substrings
 	 * @param input The input string to split
 	 */
 
-	function splitByPipe(
+	function _splitByPipe(
 		string memory input
-	) public pure returns (string[] memory) {
+	) private pure returns (string[] memory) {
 		bytes memory strBytes = bytes(input);
 		uint256 count = 1;
 
