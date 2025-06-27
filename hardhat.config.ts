@@ -7,7 +7,7 @@ import 'tsconfig-paths/register'
 
 import dotenv from 'dotenv'
 import { HardhatUserConfig, SolcUserConfig } from 'hardhat/types'
-import { sepolia } from 'viem/chains'
+import { avalancheFuji, localhost, sepolia } from 'viem/chains'
 
 import { ensureEnvVar } from './utils/ensure-env-var'
 
@@ -77,16 +77,17 @@ const config: HardhatUserConfig = {
 		},
 		localhost: {
 			url: 'http://127.0.0.1:8545',
-			chainId: 1337
-		},
-		localhost2: {
-			url: 'http://127.0.0.1:8546',
-			chainId: 31338
+			chainId: localhost.id
 		},
 		ethereumSepolia: {
 			url,
 			accounts,
 			chainId: sepolia.id
+		},
+		avalancheFuji: {
+			url,
+			accounts,
+			chainId: avalancheFuji.id
 		}
 	},
 

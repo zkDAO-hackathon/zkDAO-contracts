@@ -1,8 +1,7 @@
 {
 	"name": "zkdao-contracts",
 	"scripts": {
-		"chain1": "NODE_ENV=ethereumSepolia hardhat node --tags localhost",
-		"chain2": "NODE_ENV=ethereumSepolia hardhat node --port 8546",
+		"chain": "NODE_ENV=ethereumSepolia hardhat node --tags localhost",
 		"clean": "NODE_ENV=ethereumSepolia hardhat clean && rm -rf cache",
 		"compile": "NODE_ENV=ethereumSepolia hardhat compile",
 		"coverage": "SOLIDITY_COVERAGE=true hardhat coverage",
