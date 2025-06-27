@@ -19,7 +19,7 @@ import {Clone} from './libraries/Clone.sol';
 
 import 'hardhat/console.sol';
 
-contract ZKDAO is QueueProposalState, Consumer, Transfer {
+contract ZKDAO is QueueProposalState, Transfer {
 	/// ======================
 	/// ======= Structs ======
 	/// ======================
@@ -93,7 +93,7 @@ contract ZKDAO is QueueProposalState, Consumer, Transfer {
 		address _router,
 		address _linkAddress,
 		address _factory
-	) Consumer(_router) {
+	) QueueProposalState(_router) {
 		governorToken = IGovernorToken(_governorToken);
 		timelock = ITimeLock(_timelock);
 		governor = IGovernor(_governor);
