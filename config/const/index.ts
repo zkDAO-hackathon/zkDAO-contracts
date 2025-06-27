@@ -1,4 +1,4 @@
-import { Address, zeroAddress } from 'viem'
+import { Address, Hex, zeroAddress } from 'viem'
 
 import { NetworkConfigInfo } from '@/models'
 
@@ -32,6 +32,11 @@ export const ETHEREUM_SEPOLIA_LINK_TOKEN: Address =
 export const ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER: Address =
 	'0xb83E47C2bC239B3bf370bc41e1459A34b41238D0' // Sepolia Function Router address
 
+export const ETHEREUM_SEPOLIA_SUBSCRIPTION_ID: bigint = 5195n // pending subscription ID
+
+export const ETHEREUM_SEPOLIA_DON_ID: Hex =
+	'0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000' // Sepolia DON ID
+
 // Avalanche Fuji
 
 export const AVALANCHE_FUJI_LINK_TOKEN: Address =
@@ -39,6 +44,17 @@ export const AVALANCHE_FUJI_LINK_TOKEN: Address =
 
 export const AVALANCHE_FUJI_FUNCTIONS_ROUTER: Address =
 	'0xA9d587a00A31A52Ed70D6026794a8FC5E2F5dCb0' // Fuji Function Router address
+
+export const AVALANCHE_FUJI_SUBSCRIPTION_ID: bigint = 15681n // subscription ID
+
+export const AVALANCHE_FUJI_DON_ID: Hex =
+	'0x66756e2d6176616c616e6368652d66756a692d31000000000000000000000000' // Fuji DON ID
+
+// Common
+
+export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
+
+export const SOURCE: string = 'https://example.com/source' // replace with actual source URL
 
 // Args
 

@@ -3,10 +3,14 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import { parseEther } from 'viem'
 
 import {
+	AVALANCHE_FUJI_DON_ID,
 	AVALANCHE_FUJI_FUNCTIONS_ROUTER,
 	AVALANCHE_FUJI_LINK_TOKEN,
+	AVALANCHE_FUJI_SUBSCRIPTION_ID,
 	developmentChains,
-	networkConfig
+	GAS_LIMIT,
+	networkConfig,
+	SOURCE
 } from '@/config/const'
 import { verify } from '@/utils/verify'
 
@@ -31,15 +35,23 @@ const deployZkDao: DeployFunction = async function (
 	const governorAddress: string = governor.address
 	const verifierAddress: string = verifier.address
 	const routerAddress: string = AVALANCHE_FUJI_FUNCTIONS_ROUTER
+	const subscriptionId: bigint = AVALANCHE_FUJI_SUBSCRIPTION_ID
+	const gasLimit: bigint = GAS_LIMIT
+	const donId: string = AVALANCHE_FUJI_DON_ID
+	const source: string = SOURCE
 
-	const args: string[] = [
+	const args = [
 		governorTokenAddress,
 		timeLockAddress,
 		governorAddress,
 		verifierAddress,
 		linkTokenAddress,
+		factory,
 		routerAddress,
-		factory
+		subscriptionId,
+		gasLimit,
+		donId,
+		source
 	]
 
 	const zkDao = await deploy('ZKDAO', {

@@ -4,9 +4,13 @@ import { parseEther } from 'viem'
 
 import {
 	developmentChains,
+	ETHEREUM_SEPOLIA_DON_ID,
 	ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER,
 	ETHEREUM_SEPOLIA_LINK_TOKEN,
-	networkConfig
+	ETHEREUM_SEPOLIA_SUBSCRIPTION_ID,
+	GAS_LIMIT,
+	networkConfig,
+	SOURCE
 } from '@/config/const'
 import { verify } from '@/utils/verify'
 
@@ -31,15 +35,23 @@ const deployZkDao: DeployFunction = async function (
 	const governorAddress: string = governor.address
 	const verifierAddress: string = verifier.address
 	const routerAddress: string = ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER
+	const subscriptionId: bigint = ETHEREUM_SEPOLIA_SUBSCRIPTION_ID
+	const gasLimit: bigint = GAS_LIMIT
+	const donId: string = ETHEREUM_SEPOLIA_DON_ID
+	const source: string = SOURCE
 
-	const args: string[] = [
+	const args = [
 		governorTokenAddress,
 		timeLockAddress,
 		governorAddress,
 		verifierAddress,
 		linkTokenAddress,
+		factory,
 		routerAddress,
-		factory
+		subscriptionId,
+		gasLimit,
+		donId,
+		source
 	]
 
 	const zkDao = await deploy('ZKDAO', {
