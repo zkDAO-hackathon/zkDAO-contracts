@@ -15,6 +15,7 @@
 		"lint:fix": "eslint --fix",
 		"task:approveLink": "hardhat approve-link",
 		"task:payForDaoCreation": "hardhat pay-for-dao-creation",
+		"task:delegateVotes": "hardhat delegate-votes",
 		"test": "hardhat test",
 		"test:localhost": "hardhat test --network localhost",
 		"typechain": "hardhat typechain"

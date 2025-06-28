@@ -21,7 +21,13 @@ const {
 	AVALANCHE_FUJI_RPC_HTTPS,
 	STAGING_WALLET_PRIVATE_KEY,
 	STAGING_FACTORY_WALLET_PUBLIC_KEY,
-	STAGING_FACTORY_WALLET_PRIVATE_KEY
+	STAGING_FACTORY_WALLET_PRIVATE_KEY,
+	STAGING_USER1_WALLET_PUBLIC_KEY,
+	STAGING_USER1_WALLET_PRIVATE_KEY,
+	STAGING_USER2_WALLET_PUBLIC_KEY,
+	STAGING_USER2_WALLET_PRIVATE_KEY,
+	STAGING_USER3_WALLET_PUBLIC_KEY,
+	STAGING_USER3_WALLET_PRIVATE_KEY
 } = process.env
 
 // Ensure environment variables
@@ -52,8 +58,46 @@ const factoryWalletPrivateKey = ensureEnvVar(
 	'STAGING_FACTORY_WALLET_PRIVATE_KEY'
 )
 
+const user1WalletPublicKey = ensureEnvVar(
+	STAGING_USER1_WALLET_PUBLIC_KEY,
+	'STAGING_USER1_WALLET_PUBLIC_KEY'
+)
+
+const user1WalletPrivateKey = ensureEnvVar(
+	STAGING_USER1_WALLET_PRIVATE_KEY,
+	'STAGING_USER1_WALLET_PRIVATE_KEY'
+)
+
+const user2WalletPublicKey = ensureEnvVar(
+	STAGING_USER2_WALLET_PUBLIC_KEY,
+	'STAGING_USER2_WALLET_PUBLIC_KEY'
+)
+
+const user2WalletPrivateKey = ensureEnvVar(
+	STAGING_USER2_WALLET_PRIVATE_KEY,
+	'STAGING_USER2_WALLET_PRIVATE_KEY'
+)
+
+const user3WalletPublicKey = ensureEnvVar(
+	STAGING_USER3_WALLET_PUBLIC_KEY,
+	'STAGING_USER3_WALLET_PUBLIC_KEY'
+)
+
+const user3WalletPrivateKey = ensureEnvVar(
+	STAGING_USER3_WALLET_PRIVATE_KEY,
+	'STAGING_USER3_WALLET_PRIVATE_KEY'
+)
+
 // Set up accounts
-const accounts: string[] = [walletPrivateKey, factoryWalletPrivateKey]
+const accounts: string[] = [
+	walletPrivateKey,
+	factoryWalletPrivateKey,
+	user1WalletPrivateKey,
+	user2WalletPrivateKey,
+	user3WalletPrivateKey
+]
+
+console.log('accounts', accounts)
 
 // Set up Solidity compiler
 const solcUserConfig = (version: string): SolcUserConfig => {

@@ -18,10 +18,7 @@ task('pay-for-dao-creation', 'Create a DAO').setAction(async (_, hre) => {
 		const publicClient = await viem.getPublicClient()
 
 		const { address: zkdaoAddress } = await deployments.get('ZKDAO')
-
 		const zkdao = await viem.getContractAt('ZKDAO', zkdaoAddress as Address)
-
-		// Params
 
 		console.log('----------------------------------------------------')
 		console.log('🏗️  Paying to create DAO...')
