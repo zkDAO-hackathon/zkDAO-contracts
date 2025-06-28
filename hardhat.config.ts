@@ -97,8 +97,6 @@ const accounts: string[] = [
 	user3WalletPrivateKey
 ]
 
-console.log('accounts', accounts)
-
 // Set up Solidity compiler
 const solcUserConfig = (version: string): SolcUserConfig => {
 	return {
@@ -143,13 +141,13 @@ const config: HardhatUserConfig = {
 		factory: { default: factoryWalletPublicKey },
 
 		user1: {
-			default: 1
+			default: user1WalletPublicKey
 		},
 		user2: {
-			default: 2
+			default: user2WalletPublicKey
 		},
 		user3: {
-			default: 3
+			default: user3WalletPublicKey
 		},
 		user4: {
 			default: 4

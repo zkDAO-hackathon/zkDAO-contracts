@@ -115,6 +115,7 @@ export const SOURCE: string = 'https://example.com/source' // replace with actua
 
 // Args
 
+// Pay for creation of DAO args
 const tokenName: string = 'zkDAO token'
 const tokenSymbol: string = 'zkDAO'
 
@@ -154,8 +155,5 @@ const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
 
 export const TO: Address[] = [user1, user2, user3]
 
-export const AMOUNTS: bigint[] = [
-	parseEther('3'),
-	parseEther('3'),
-	parseEther('3')
-]
+export const AMOUNT: bigint = parseEther('3') // 3 tokens each
+export const AMOUNTS: bigint[] = [AMOUNT, AMOUNT, AMOUNT]

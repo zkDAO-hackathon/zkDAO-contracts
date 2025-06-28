@@ -21,28 +21,30 @@ task('delegate-votes', 'Delegates voting power of a GovernorToken').setAction(
 		const daoCounter = await zkdao.read.getDaoCounter()
 		const dao = (await zkdao.read.getDao([daoCounter])) as DaoStruct
 
-		const token = dao.token
-		const tokenGovernor = await viem.getContractAt(
-			'GovernorToken',
-			token as Address
-		)
+		const tokenGovernor = await viem.getContractAt('GovernorToken', dao.token)
 
 		console.log('----------------------------------------------------')
 		console.log(`🫂  ${user1} Delegating votes yourself`)
 
+		const user1Client = await viem.getWalletClient(user1 as Address)
 		const delegateTx1 = await tokenGovernor.write.delegate([user1 as Address], {
-			account: user1 as Address
+			account: user1 as Address,
+			walletClient: user1Client
 		})
 
 		await publicClient.waitForTransactionReceipt({ hash: delegateTx1 })
 
 		console.log(`✅ User1 delegated votes. tx hash: ${delegateTx1}`)
 
+		await tokenGovernor.read.getVotes([user1])
+
 		console.log('----------------------------------------------------')
 		console.log(`🫂  ${user2} Delegating votes yourself`)
 
+		const user2Client = await viem.getWalletClient(user2 as Address)
 		const delegateTx2 = await tokenGovernor.write.delegate([user2 as Address], {
-			account: user2 as Address
+			account: user2 as Address,
+			walletClient: user2Client
 		})
 
 		await publicClient.waitForTransactionReceipt({ hash: delegateTx2 })
@@ -52,8 +54,10 @@ task('delegate-votes', 'Delegates voting power of a GovernorToken').setAction(
 		console.log('----------------------------------------------------')
 		console.log(`🫂  ${user3} Delegating votes yourself`)
 
+		const user3Client = await viem.getWalletClient(user3 as Address)
 		const delegateTx3 = await tokenGovernor.write.delegate([user3 as Address], {
-			account: user3 as Address
+			account: user3 as Address,
+			walletClient: user3Client
 		})
 
 		await publicClient.waitForTransactionReceipt({ hash: delegateTx3 })
