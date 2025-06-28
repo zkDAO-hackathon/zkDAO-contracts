@@ -11,6 +11,7 @@ import {
 	getAddress,
 	keccak256,
 	parseEther,
+	parseGwei,
 	recoverPublicKey,
 	toBytes
 } from 'viem'
@@ -116,10 +117,27 @@ describe('MockZKDAO', function () {
 
 		const publicClient = await hre.viem.getPublicClient()
 
+		const wallet = await hre.viem.getWalletClient(deployer)
+
+		const transferNativeTokenTx = await wallet.sendTransaction({
+			account: deployer,
+			to: factory,
+			value: parseEther('1')
+		})
+
+		// balance of factory wallet
+		const factoryBalance = await publicClient.getBalance({ address: factory })
+
+		log(`Factory wallet funded with NATIVE token: ${factoryBalance}`)
+
 		// 🚩 1) Create DAO
 		const createDaoTx = await mockZkDao.write.createDao(
 			[GOVERNOR_TOKEN_PARAMS, MIN_DELAY, GOVERNOR_PARAMS, TO, AMOUNTS],
-			{ account: factory }
+			{
+				account: factory,
+				maxFeePerGas: parseGwei('1'), // 1 gwei ≈ 0.003 ETH total
+				maxPriorityFeePerGas: parseGwei('1') // 1 gwei (propina)
+			}
 		)
 
 		const createDaoReceipt = await publicClient.getTransactionReceipt({

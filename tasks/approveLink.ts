@@ -12,6 +12,7 @@ task('approve-link', 'Approve 5 LINK tokens for ZKDAO contract').setAction(
 
 			const chain = network.name
 
+			console.log('----------------------------------------------------')
 			console.log(`🔗 Approving LINK on ${chain}...`)
 
 			const publicClient = await viem.getPublicClient()
@@ -20,7 +21,8 @@ task('approve-link', 'Approve 5 LINK tokens for ZKDAO contract').setAction(
 
 			const link = await viem.getContractAt('IERC20', LINK_TOKEN(chain))
 
-			console.log(`🔓 Approving 5 LINK to ZKDAO at ${zkdaoAddress}...`)
+			console.log('----------------------------------------------------')
+			console.log(`🔓 Approving ${PRICE} LINK to ZKDAO at ${zkdaoAddress}...`)
 
 			const approveTx = await link.write.approve([zkdaoAddress, PRICE], {
 				account: deployer as Address

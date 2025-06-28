@@ -1,8 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
-import { stringToHex } from 'viem'
 
-import { developmentChains, networkConfig } from '@/config/const'
+import {
+	developmentChains,
+	networkConfig,
+	TIMELOCK_DETERMINISTIC_DEPLOYMENT
+} from '@/config/const'
 import { verify } from '@/utils/verify'
 
 const deployTimeLock: DeployFunction = async function (
@@ -20,7 +23,7 @@ const deployTimeLock: DeployFunction = async function (
 	const deterministic = await deployments.deterministic('TimeLock', {
 		from: deployer,
 		args,
-		deterministicDeployment: stringToHex('timelock-v1'),
+		deterministicDeployment: TIMELOCK_DETERMINISTIC_DEPLOYMENT,
 		contract: 'TimeLock',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1

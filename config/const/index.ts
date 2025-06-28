@@ -1,4 +1,4 @@
-import { Address, Hex, parseEther, zeroAddress } from 'viem'
+import { Address, Hex, parseEther, stringToHex, zeroAddress } from 'viem'
 
 import { NetworkConfigInfo } from '@/models'
 
@@ -52,12 +52,6 @@ export const AVALANCHE_FUJI_DON_ID: Hex =
 
 // Common
 
-export const PRICE = parseEther('5') // 5 LINK with 18 decimals
-
-export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
-
-export const SOURCE: string = 'https://example.com/source' // replace with actual source URL
-
 export const LINK_TOKEN: (chain: string) => Address = (
 	chain: string
 ): Address => {
@@ -104,18 +98,64 @@ export const DON_ID: (chain: string) => Hex = (chain: string): Hex => {
 	}
 }
 
+export const GOVERNOR_TOKEN_DETERMINISTIC_DEPLOYMENT: Hex =
+	stringToHex('governor-token-v3')
+
+export const TIMELOCK_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('timelock-v3')
+
+export const GOVERNOR_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('governor-v3')
+
+export const VERIFIER_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('verifier-v3')
+
+export const PRICE = parseEther('2') // 5 LINK with 18 decimals
+
+export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
+
+export const SOURCE: string = 'https://example.com/source' // replace with actual source URL
+
 // Args
 
-export const tokenName: string = 'zkDAO token'
-export const tokenSymbol: string = 'zkDAO'
+const tokenName: string = 'zkDAO token'
+const tokenSymbol: string = 'zkDAO'
 
-export const minDelay: number = 300 // 5 minutes
+export const GOVERNOR_TOKEN_PARAMS = {
+	name: tokenName,
+	symbol: tokenSymbol
+}
+
+export const MIN_DELAY: bigint = 300n // 5 minutes
 export const proposers: string[] = []
 export const executors: string[] = []
 export const admin: string = zeroAddress
 
-export const name: string = 'zkDAO Governor'
-export const votingDelay: number = 604800 // 1 week
-export const votingPeriod: number = 604800 // 1 week
-export const proposalThreshold: number = 1 // 0 token
-export const votesQuorumFraction: number = 4 // 4% of total supply
+const name: string = 'Bogota DAO'
+const description: string = 'DAO for Bogota'
+const logo: string =
+	'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafybeibendwijlnunkx7mpsgre2kquvtlt5tnfk7eeydqegyi4hpmrbxai'
+
+const votingDelay: bigint = 604_800n // 1 week
+const votingPeriod: bigint = 604_800n // 1 week
+const proposalThreshold: bigint = 1n // 0 token
+const quorumFraction: bigint = 4n // 4% of total supply
+
+export const GOVERNOR_PARAMS = {
+	name,
+	description,
+	logo,
+	votingDelay,
+	votingPeriod,
+	proposalThreshold,
+	quorumFraction
+}
+
+const user1: Address = '0x7753E5f36f20B14fFb6b6a61319Eb66f63abdb0b'
+const user2: Address = '0xDCF75D1C782fB6459e47cf4Aa9fdc7c9f13f414c'
+const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
+
+export const TO: Address[] = [user1, user2, user3]
+
+export const AMOUNTS: bigint[] = [
+	parseEther('3'),
+	parseEther('3'),
+	parseEther('3')
+]

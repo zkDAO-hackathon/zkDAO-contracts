@@ -109,7 +109,7 @@ interface IZKDAO {
 		GovernorParams calldata _governorParams,
 		address[] calldata _to,
 		uint256[] calldata _amounts
-	) external payable;
+	) external;
 
 	function payForDaoCreation(
 		GovernorTokenParams calldata _tokenParams,
@@ -118,7 +118,7 @@ interface IZKDAO {
 		address[] calldata _to,
 		uint256[] calldata _amounts,
 		uint256 _value
-	) external payable;
+	) external;
 
 	/**
 	 * @notice Queue a proposal for processing (called by Governor contracts)

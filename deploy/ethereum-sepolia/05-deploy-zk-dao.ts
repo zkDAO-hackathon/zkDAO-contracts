@@ -1,6 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
-import { parseEther } from 'viem'
 
 import {
 	developmentChains,
@@ -65,7 +64,7 @@ const deployZkDao: DeployFunction = async function (
 	log(`ZKDAO contract at ${zkDao.address}`)
 
 	if (!developmentChains.includes(network.name)) {
-		await verify(verifier.address, args)
+		await verify(zkDao.address, args)
 	}
 
 	const artifact = await deployments.getExtendedArtifact('ZKDAO')
@@ -74,18 +73,18 @@ const deployZkDao: DeployFunction = async function (
 		...artifact
 	})
 
-	log('----------------------------------------------------')
-	log('Funding factory wallet with NATIVE token...')
+	// log('----------------------------------------------------')
+	// log('Funding factory wallet with NATIVE token...')
 
-	const wallet = await hre.viem.getWalletClient(deployer)
+	// const wallet = await hre.viem.getWalletClient(deployer)
 
-	const transferNativeTokenTx = await wallet.sendTransaction({
-		account: deployer,
-		to: factory,
-		value: parseEther('0.1') // 0.01 ETH
-	})
+	// const transferNativeTokenTx = await wallet.sendTransaction({
+	// 	account: deployer,
+	// 	to: factory,
+	// 	value: parseEther('0.1') // 0.01 ETH
+	// })
 
-	log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
+	// log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
 }
 
 export default deployZkDao

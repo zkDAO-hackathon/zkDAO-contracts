@@ -67,7 +67,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 	/// === Storage Variables ===
 	/// =========================
 
-	uint256 private price = 5 ether; // Price to create a DAO in LINK tokens
+	uint256 private price = 2 ether; // Price to create a DAO in LINK tokens
 	uint256 private daoCounter;
 
 	address private factory;
@@ -206,6 +206,8 @@ contract ZKDAO is QueueProposalState, Transfer {
 		address[] calldata _to,
 		uint256[] calldata _amounts
 	) external onlyFactory {
+		if (_to.length != _amounts.length) revert MISMATCH();
+
 		uint256 baseNonce = ++nonces[msg.sender];
 		uint256 id = ++daoCounter;
 
@@ -254,9 +256,10 @@ contract ZKDAO is QueueProposalState, Transfer {
 			address(this)
 		);
 
-		IGovernorToken(governorClone).mintBatch(_to, _amounts);
+		IGovernorToken(tokenClone).mintBatch(_to, _amounts);
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
 
+		daoIds[governorClone] = id;
 		daos[id] = DAO({
 			token: IGovernorToken(tokenClone),
 			timelock: ITimeLock(timelockClone),
@@ -274,6 +277,18 @@ contract ZKDAO is QueueProposalState, Transfer {
 		address voteToken
 	) external onlyZkDaos {
 		_queueProposal(daoId, proposalId, snapshot, voteToken);
+	}
+
+	function setPrice(uint256 _price) external {
+		price = _price;
+	}
+
+	function recoverFunds(address _token, address _to) external {
+		uint256 amount = _token == NATIVE
+			? address(this).balance
+			: ERC20(_token).balanceOf(address(this));
+
+		_transferAmount(_token, _to, amount);
 	}
 
 	/// =========================
@@ -328,6 +343,4 @@ contract ZKDAO is QueueProposalState, Transfer {
 
 		IGovernor(_governorClone).initialize(memoryParams, _verifier);
 	}
-
-	/// @notice Group functions
 }

@@ -27,7 +27,7 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Transfer, Errors {
 	mapping(uint256 => DAO) private daos;
 	mapping(address => uint256) public daoIds;
 
-	uint256 public price = 5 ether; // Price in LINK tokens for creating a DAO
+	uint256 public price = 2 ether; // Price in LINK tokens for creating a DAO
 	uint256 public daoCount;
 
 	address public factory;
@@ -122,7 +122,7 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Transfer, Errors {
 		address[] calldata _to,
 		uint256[] calldata _amounts,
 		uint256 _value
-	) external payable {
+	) external {
 		if (linkToken.balanceOf(msg.sender) < price) revert INSUFFICIENT_FUNDS();
 
 		if (linkToken.allowance(msg.sender, address(this)) < price)
@@ -149,7 +149,7 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Transfer, Errors {
 		GovernorParams calldata _governorParams,
 		address[] calldata _to,
 		uint256[] calldata _amounts
-	) external payable onlyFactory {
+	) external onlyFactory {
 		if (_to.length != _amounts.length) revert MISMATCH();
 
 		uint256 baseNonce = ++nonces[msg.sender];

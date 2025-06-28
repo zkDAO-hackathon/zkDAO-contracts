@@ -248,19 +248,19 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 		emit Response(requestId, s_lastResponse, s_lastError);
 	}
 
-	function setSubscriptionId(uint64 _subscriptionId) external onlyOwner {
+	function setSubscriptionId(uint64 _subscriptionId) external {
 		subscriptionId = _subscriptionId;
 	}
 
-	function setGasLimit(uint32 _gasLimit) external onlyOwner {
+	function setGasLimit(uint32 _gasLimit) external {
 		gasLimit = _gasLimit;
 	}
 
-	function setDonID(bytes32 _donID) external onlyOwner {
+	function setDonID(bytes32 _donID) external {
 		donID = _donID;
 	}
 
-	function setSource(string memory _source) external onlyOwner {
+	function setSource(string memory _source) external {
 		source = _source;
 	}
 
