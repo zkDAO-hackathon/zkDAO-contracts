@@ -4,7 +4,7 @@ import { type Address, encodeFunctionData } from 'viem'
 import { AMOUNT } from '@/config/const'
 import { DaoStruct } from '@/models'
 
-task('propose', '`Propose to give ${AMOUNT} tokens to an user`').setAction(
+task('propose', `Propose to give ${AMOUNT} tokens to an user`).setAction(
 	async (_, hre) => {
 		const { viem } = hre
 		const { getNamedAccounts, deployments, network } = hre

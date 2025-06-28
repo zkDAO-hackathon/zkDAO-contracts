@@ -30,7 +30,7 @@ export const ETHEREUM_SEPOLIA_LINK_TOKEN: Address =
 export const ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER: Address =
 	'0xb83E47C2bC239B3bf370bc41e1459A34b41238D0' // Sepolia Function Router address
 
-export const ETHEREUM_SEPOLIA_SUBSCRIPTION_ID: bigint = 5195n // pending subscription ID
+export const ETHEREUM_SEPOLIA_SUBSCRIPTION_ID: bigint = 5226n // subscription ID
 
 export const ETHEREUM_SEPOLIA_DON_ID: Hex =
 	'0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000' // Sepolia DON ID
@@ -103,19 +103,15 @@ export const GOVERNOR_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('governor-v4')
 
 export const VERIFIER_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('verifier-v4')
 
-export const PRICE = parseEther('2') // 5 LINK with 18 decimals
+export const PRICE = parseEther('1') // 1 LINK with 18 decimals
 
 export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
 
 export const SOURCE = `
-	// make HTTP request
-	const url =
-		"https://8861-186-84-88-137.ngrok-free.app/merkle-tree/generate-merkle-trees";
-
-	console.log(\`HTTP POST Request to \${url}\`);
+	const url = "https://00d3-186-84-89-145.ngrok-free.app/merkle-tree/generate-merkle-trees";
 
 	const response = await Functions.makeHttpRequest({
-		url: url,
+		url,
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -126,19 +122,14 @@ export const SOURCE = `
 	});
 
 	if (response.error) {
-		console.error(
-			response.response
-				? \`\${response.response.status},\${response.response.statusText}\`
-				: ""
-		);
-
-		throw Error("Request failed");
+		const { status, statusText } = response.response || {};
+		throw Error(\`Request failed: \${status ?? "Unknown"} \${statusText ?? "No status text"}\`);
 	}
 
 	const { cids } = response.data;
 
 	if (!cids) {
-		throw Error(\`No cids found in the response\`);
+		throw Error("No cids found in the response");
 	}
 
 	return Functions.encodeString(cids);
@@ -155,7 +146,7 @@ export const GOVERNOR_TOKEN_PARAMS = {
 	symbol: tokenSymbol
 }
 
-export const MIN_DELAY: bigint = 150n // 2.5 minutes
+export const MIN_DELAY: bigint = 0n // 0 minutes
 export const proposers: string[] = []
 export const executors: string[] = []
 export const admin: string = zeroAddress
@@ -165,7 +156,7 @@ const description: string = 'DAO for Bogota'
 const logo: string =
 	'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafybeibendwijlnunkx7mpsgre2kquvtlt5tnfk7eeydqegyi4hpmrbxai'
 
-const votingDelay: bigint = 0n // 2.5 minutes
+const votingDelay: bigint = 150n // 2.5 minutes
 const votingPeriod: bigint = 150n // 2.5 minutes
 const proposalThreshold: bigint = 1n // 0 token
 const quorumFraction: bigint = 4n // 4% of total supply
@@ -186,5 +177,5 @@ const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
 
 export const TO: Address[] = [user1, user2, user3]
 
-export const AMOUNT: bigint = parseEther('5') // 3 tokens each
+export const AMOUNT: bigint = parseEther('0.07') // 3 tokens each
 export const AMOUNTS: bigint[] = [AMOUNT, AMOUNT, AMOUNT]

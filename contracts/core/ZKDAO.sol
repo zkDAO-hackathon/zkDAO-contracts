@@ -67,7 +67,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 	/// === Storage Variables ===
 	/// =========================
 
-	uint256 private price = 2 ether; // Price to create a DAO in LINK tokens
+	uint256 private price = 1 ether; // Price to create a DAO in LINK tokens
 	uint256 private daoCounter;
 
 	address private factory;

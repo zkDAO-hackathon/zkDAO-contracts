@@ -32,13 +32,15 @@ contract Governor is
 	/// === Storage Variables ===
 	/// =========================
 
-	mapping(uint256 => ZKProposalVote) private zkVotes;
+	mapping(uint256 => uint256) private proposalsIds;
 	mapping(uint256 => string) private cids;
+	mapping(uint256 => ZKProposalVote) private zkVotes;
 	mapping(uint256 => mapping(uint256 => bool)) private nullifierUsed;
 
 	IVerifier public verifier;
 	IZKDAO public zkDao;
 
+	uint256 private proposalCounter;
 	uint256 public id;
 	string public description;
 	string public logo;
@@ -90,6 +92,14 @@ contract Governor is
 	/// ===== View Functions =====
 	/// ==========================
 
+	function getProposalCounter() external view returns (uint256) {
+		return proposalCounter;
+	}
+
+	function getProposalId(uint256 _proposalId) external view returns (uint256) {
+		return proposalsIds[_proposalId];
+	}
+
 	function getNullifierUsed(
 		uint256 proposalId,
 		uint256 nullifier
@@ -132,10 +142,16 @@ contract Governor is
 		bytes calldata _proof,
 		bytes32[] calldata _inputs
 	) external {
+		if (state(_proposalId) != ProposalState.Active) revert VOTING_CLOSED();
+
 		if (!verifier.verify(_proof, _inputs)) revert ZK_PROOF_FAILED();
 
+		uint256 nullifier = uint256(_inputs[0]);
 		uint256 weight = uint256(_inputs[1]);
 		uint256 choice = uint256(_inputs[2]);
+
+		if (nullifierUsed[_proposalId][nullifier]) revert DOUBLE_VOTE();
+		nullifierUsed[_proposalId][nullifier] = true;
 
 		_countVote(_proposalId, address(0), uint8(choice), weight, '');
 
@@ -239,6 +255,9 @@ contract Governor is
 			proposer
 		);
 
+		proposalCounter++;
+		proposalsIds[proposalCounter] = proposalId;
+
 		uint256 snapshot = proposalSnapshot(proposalId);
 
 		zkDao.queueProposal(
@@ -248,6 +267,7 @@ contract Governor is
 			block.number,
 			address(token())
 		);
+
 		return proposalId;
 	}
 

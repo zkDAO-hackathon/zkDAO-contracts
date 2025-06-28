@@ -17,6 +17,7 @@
 		"task:payForDaoCreation": "hardhat pay-for-dao-creation",
 		"task:delegateVotes": "hardhat delegate-votes",
 		"task:propose": "hardhat propose",
+		"task:castZkVote": "hardhat cast-zk-vote",
 		"test": "hardhat test",
 		"test:localhost": "hardhat test --network localhost",
 		"typechain": "hardhat typechain"

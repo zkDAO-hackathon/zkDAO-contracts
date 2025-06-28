@@ -125,81 +125,30 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 	function getQueueWithTimeLeft()
 		external
 		view
-		returns (ProposalWithTimeLeft[] memory _pendingProposals)
+		returns (ProposalWithTimeLeft[] memory _allProposals)
 	{
-		uint256 pendingCount;
-		for (uint256 i; i < queue.length; ) {
-			if (block.timestamp < queue[i].snapshot) pendingCount++;
-			unchecked {
-				i++;
-			}
-		}
+		uint256 len = queue.length;
+		_allProposals = new ProposalWithTimeLeft[](len);
 
-		_pendingProposals = new ProposalWithTimeLeft[](pendingCount);
-		uint256 id;
+		for (uint256 i; i < len; ) {
+			Proposal memory proposal = queue[i];
+			// Calcula timeLeft: 0 si ya pasó, o tiempo restante si está pendiente
+			uint256 timeRemaining = block.timestamp >= proposal.snapshot
+				? 0
+				: proposal.snapshot - block.timestamp;
 
-		for (uint256 i; i < queue.length; ) {
-			if (block.timestamp < queue[i].snapshot) {
-				Proposal memory proposal = queue[i];
-				uint256 timeRemaining = proposal.snapshot - block.timestamp;
+			_allProposals[i] = ProposalWithTimeLeft({
+				dao: proposal.dao,
+				voteToken: proposal.voteToken,
+				daoId: proposal.daoId,
+				proposalId: proposal.proposalId,
+				snapshot: proposal.snapshot,
+				proposalBlock: proposal.proposalBlock,
+				queued: proposal.queued,
+				executed: proposal.executed,
+				timeLeft: timeRemaining
+			});
 
-				_pendingProposals[id] = ProposalWithTimeLeft({
-					dao: proposal.dao,
-					voteToken: proposal.voteToken,
-					daoId: proposal.daoId,
-					proposalId: proposal.proposalId,
-					snapshot: proposal.snapshot,
-					proposalBlock: proposal.proposalBlock,
-					queued: proposal.queued,
-					executed: proposal.executed,
-					timeLeft: timeRemaining
-				});
-
-				unchecked {
-					id++;
-				}
-			}
-			unchecked {
-				i++;
-			}
-		}
-	}
-
-	/**
-	 * @notice Devuelve solo las propuestas de `queue`
-	 *         cuyo snapshot aún no se cumple,
-	 *         junto con el tiempo restante de cada una.
-	 *
-	 * @return pending      Array de propuestas pendientes.
-	 * @return secondsLeft  Tiempo restante (paralelo a `pending`).
-	 */
-	function pendingSnapshots()
-		external
-		view
-		returns (Proposal[] memory pending, uint256[] memory secondsLeft)
-	{
-		// 1) Contar cuántas siguen pendientes
-		uint256 pendingCount;
-		for (uint256 i; i < queue.length; ) {
-			if (block.timestamp < queue[i].snapshot) pendingCount++;
-			unchecked {
-				i++;
-			}
-		}
-
-		// 2) Llenar arrays de salida
-		pending = new Proposal[](pendingCount);
-		secondsLeft = new uint256[](pendingCount);
-
-		uint256 idx;
-		for (uint256 i; i < queue.length; ) {
-			if (block.timestamp < queue[i].snapshot) {
-				pending[idx] = queue[i];
-				secondsLeft[idx] = queue[i].snapshot - block.timestamp;
-				unchecked {
-					idx++;
-				}
-			}
 			unchecked {
 				i++;
 			}

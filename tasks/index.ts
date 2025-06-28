@@ -1,4 +1,5 @@
 import './approve-token'
+import './cast-zk-vote'
 import './delegate-votes'
 import './pay-for-creation-dao'
 import './propose'
