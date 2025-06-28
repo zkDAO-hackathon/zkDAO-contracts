@@ -35,10 +35,19 @@ contract MockQueueProposalState is MockConsumer {
 		uint256 indexed daoId,
 		uint256 indexed proposalId,
 		uint256 snapshot,
+		uint256 proposalBlock,
 		address voteToken
 	);
 
-	event ProposalDequeued(uint256 indexed id, uint256 snapshot);
+	event ProposalDequeued(
+		address indexed dao,
+		uint256 indexed daoId,
+		uint256 indexed proposalId,
+		uint256 snapshot,
+		uint256 proposalBlock,
+		address voteToken
+	);
+
 	event UpkeepPerformed(uint256 indexed upkeepId, uint256 proposalsProcessed);
 	event AutomationToggled(bool enabled);
 
@@ -176,7 +185,14 @@ contract MockQueueProposalState is MockConsumer {
 				args[i] = serialized;
 				console.log('Serialized proposal:', serialized);
 
-				emit ProposalDequeued(p.proposalId, p.snapshot);
+				emit ProposalDequeued(
+					address(p.dao),
+					p.daoId,
+					p.proposalId,
+					p.snapshot,
+					p.proposalBlock,
+					p.voteToken
+				);
 			}
 
 			sendRequest(
@@ -203,6 +219,7 @@ contract MockQueueProposalState is MockConsumer {
 		uint256 _daoId,
 		uint256 _proposalId,
 		uint256 _snapshot,
+		uint256 _proposalBlock,
 		address voteToken
 	) internal virtual {
 		queue.push(
@@ -211,13 +228,21 @@ contract MockQueueProposalState is MockConsumer {
 				daoId: _daoId,
 				proposalId: _proposalId,
 				snapshot: _snapshot,
+				proposalBlock: _proposalBlock,
 				voteToken: voteToken,
 				queued: false,
 				executed: false
 			})
 		);
 
-		emit ProposalQueued(msg.sender, _daoId, _proposalId, _snapshot, voteToken);
+		emit ProposalQueued(
+			msg.sender,
+			_daoId,
+			_proposalId,
+			_snapshot,
+			_proposalBlock,
+			voteToken
+		);
 	}
 
 	/// ================================
@@ -345,43 +370,6 @@ contract MockQueueProposalState is MockConsumer {
 	 */
 	function setAutomationRegistry(address registry) external {
 		automationRegistry = registry;
-	}
-
-	/**
-	 * @notice Batch queue multiple proposals for testing
-	 */
-	function batchQueueProposals(
-		address[] calldata daos,
-		uint256[] calldata proposalIds,
-		uint256[] calldata snapshots,
-		address[] calldata voteTokens
-	) external {
-		require(
-			daos.length == proposalIds.length &&
-				proposalIds.length == snapshots.length,
-			'Arrays length mismatch'
-		);
-
-		for (uint256 i = 0; i < daos.length; i++) {
-			queue.push(
-				Proposal({
-					dao: IGovernor(daos[i]),
-					daoId: 0, // DAO ID can be set later if needed
-					proposalId: proposalIds[i],
-					snapshot: snapshots[i],
-					voteToken: voteTokens[i],
-					queued: false,
-					executed: false
-				})
-			);
-			emit ProposalQueued(
-				daos[i],
-				0, // DAO ID can be set later if needed
-				proposalIds[i],
-				snapshots[i],
-				voteTokens[i]
-			);
-		}
 	}
 
 	/**

@@ -241,7 +241,13 @@ contract Governor is
 
 		uint256 snapshot = proposalSnapshot(proposalId);
 
-		zkDao.queueProposal(id, proposalId, snapshot, address(token()));
+		zkDao.queueProposal(
+			id,
+			proposalId,
+			snapshot,
+			block.number,
+			address(token())
+		);
 		return proposalId;
 	}
 

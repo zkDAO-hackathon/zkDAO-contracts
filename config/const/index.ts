@@ -3,7 +3,6 @@ import { Address, Hex, parseEther, stringToHex, zeroAddress } from 'viem'
 import { NetworkConfigInfo } from '@/models'
 
 // Hardhat and Localhost are development chains
-
 export const developmentChains = ['hardhat', 'localhost']
 
 export const networkConfig: NetworkConfigInfo = {
@@ -25,7 +24,6 @@ export const BN254_FIELD_MODULUS: bigint = BigInt(
 export const NATIVE: Address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
 // Ethreum Sepolia
-
 export const ETHEREUM_SEPOLIA_LINK_TOKEN: Address =
 	'0x779877A7B0D9E8603169DdbD7836e478b4624789' // Sepolia LINK token address
 
@@ -38,7 +36,6 @@ export const ETHEREUM_SEPOLIA_DON_ID: Hex =
 	'0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000' // Sepolia DON ID
 
 // Avalanche Fuji
-
 export const AVALANCHE_FUJI_LINK_TOKEN: Address =
 	'0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846' // Fuji LINK token address
 
@@ -51,7 +48,6 @@ export const AVALANCHE_FUJI_DON_ID: Hex =
 	'0x66756e2d6176616c616e6368652d66756a692d31000000000000000000000000' // Fuji DON ID
 
 // Common
-
 export const LINK_TOKEN: (chain: string) => Address = (
 	chain: string
 ): Address => {
@@ -112,13 +108,9 @@ export const PRICE = parseEther('2') // 5 LINK with 18 decimals
 export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
 
 export const SOURCE = `
-	// No authentication. demonstrate POST with data in body
-	// callgraphql api: https://github.com/trevorblades/countries
-	// docs: https://trevorblades.github.io/countries/queries/continent
-
 	// make HTTP request
 	const url =
-		"https://9134-186-84-89-97.ngrok-free.app/merkle-tree/generate-merkle-trees";
+		"https://8861-186-84-88-137.ngrok-free.app/merkle-tree/generate-merkle-trees";
 
 	console.log(\`HTTP POST Request to \${url}\`);
 
@@ -143,13 +135,13 @@ export const SOURCE = `
 		throw Error("Request failed");
 	}
 
-	const { merkleRoots } = response.data;
+	const { cids } = response.data;
 
-	if (!merkleRoots) {
-		throw Error(\`No merkle trees found in the response\`);
+	if (!cids) {
+		throw Error(\`No cids found in the response\`);
 	}
 
-	return Functions.encodeString(merkleRoots);
+	return Functions.encodeString(cids);
 ` // Source code for the Functions job
 
 // Args
@@ -173,7 +165,7 @@ const description: string = 'DAO for Bogota'
 const logo: string =
 	'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafybeibendwijlnunkx7mpsgre2kquvtlt5tnfk7eeydqegyi4hpmrbxai'
 
-const votingDelay: bigint = 150n // 2.5 minutes
+const votingDelay: bigint = 0n // 2.5 minutes
 const votingPeriod: bigint = 150n // 2.5 minutes
 const proposalThreshold: bigint = 1n // 0 token
 const quorumFraction: bigint = 4n // 4% of total supply
@@ -194,5 +186,5 @@ const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
 
 export const TO: Address[] = [user1, user2, user3]
 
-export const AMOUNT: bigint = parseEther('2') // 3 tokens each
+export const AMOUNT: bigint = parseEther('5') // 3 tokens each
 export const AMOUNTS: bigint[] = [AMOUNT, AMOUNT, AMOUNT]

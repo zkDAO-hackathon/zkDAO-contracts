@@ -16,6 +16,7 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		uint256 indexed daoId,
 		uint256 indexed proposalId,
 		uint256 snapshot,
+		uint256 proposalBlock,
 		address voteToken
 	);
 
@@ -24,6 +25,7 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		uint256 indexed daoId,
 		uint256 indexed proposalId,
 		uint256 snapshot,
+		uint256 proposalBlock,
 		address voteToken
 	);
 
@@ -133,6 +135,8 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 						_uintToString(p.proposalId),
 						';snapshot=',
 						_uintToString(p.snapshot),
+						';proposalBlock=',
+						_uintToString(p.proposalBlock),
 						';voteToken=',
 						_toAsciiString(p.voteToken)
 					)
@@ -146,6 +150,7 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 					p.daoId,
 					p.proposalId,
 					p.snapshot,
+					p.proposalBlock,
 					p.voteToken
 				);
 
@@ -183,6 +188,7 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		uint256 _daoId,
 		uint256 _proposalId,
 		uint256 _snapshot,
+		uint256 _proposalBlock,
 		address voteToken
 	) internal virtual {
 		queue.push(
@@ -191,13 +197,21 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 				daoId: _daoId,
 				proposalId: _proposalId,
 				snapshot: _snapshot,
+				proposalBlock: _proposalBlock,
 				voteToken: voteToken,
 				queued: false,
 				executed: false
 			})
 		);
 
-		emit ProposalQueued(msg.sender, _daoId, _proposalId, _snapshot, voteToken);
+		emit ProposalQueued(
+			msg.sender,
+			_daoId,
+			_proposalId,
+			_snapshot,
+			_proposalBlock,
+			voteToken
+		);
 	}
 
 	/// ==========================

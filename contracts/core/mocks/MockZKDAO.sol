@@ -220,9 +220,10 @@ contract MockZKDAO is IZKDAO, MockQueueProposalState, Transfer, Errors {
 		uint256 daoId,
 		uint256 proposalId,
 		uint256 snapshot,
+		uint256 proposalBlock,
 		address voteToken
 	) external onlyZkDaos {
-		_queueProposal(daoId, proposalId, snapshot, voteToken);
+		_queueProposal(daoId, proposalId, snapshot, proposalBlock, voteToken);
 	}
 
 	/// =========================

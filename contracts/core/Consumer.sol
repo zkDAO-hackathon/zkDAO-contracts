@@ -27,6 +27,20 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 		uint256 daoId;
 		uint256 proposalId;
 		uint256 snapshot;
+		uint256 proposalBlock;
+		bool queued;
+		bool executed;
+		// 30 bytes free for future use
+	}
+
+	struct ProposalWithTimeLeft {
+		IGovernor dao;
+		address voteToken;
+		uint256 daoId;
+		uint256 proposalId;
+		uint256 snapshot;
+		uint256 proposalBlock;
+		uint256 timeLeft;
 		bool queued;
 		bool executed;
 		// 30 bytes free for future use
@@ -106,6 +120,90 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 
 	function getQueue() external view returns (Proposal[] memory) {
 		return queue;
+	}
+
+	function getQueueWithTimeLeft()
+		external
+		view
+		returns (ProposalWithTimeLeft[] memory _pendingProposals)
+	{
+		uint256 pendingCount;
+		for (uint256 i; i < queue.length; ) {
+			if (block.timestamp < queue[i].snapshot) pendingCount++;
+			unchecked {
+				i++;
+			}
+		}
+
+		_pendingProposals = new ProposalWithTimeLeft[](pendingCount);
+		uint256 id;
+
+		for (uint256 i; i < queue.length; ) {
+			if (block.timestamp < queue[i].snapshot) {
+				Proposal memory proposal = queue[i];
+				uint256 timeRemaining = proposal.snapshot - block.timestamp;
+
+				_pendingProposals[id] = ProposalWithTimeLeft({
+					dao: proposal.dao,
+					voteToken: proposal.voteToken,
+					daoId: proposal.daoId,
+					proposalId: proposal.proposalId,
+					snapshot: proposal.snapshot,
+					proposalBlock: proposal.proposalBlock,
+					queued: proposal.queued,
+					executed: proposal.executed,
+					timeLeft: timeRemaining
+				});
+
+				unchecked {
+					id++;
+				}
+			}
+			unchecked {
+				i++;
+			}
+		}
+	}
+
+	/**
+	 * @notice Devuelve solo las propuestas de `queue`
+	 *         cuyo snapshot aún no se cumple,
+	 *         junto con el tiempo restante de cada una.
+	 *
+	 * @return pending      Array de propuestas pendientes.
+	 * @return secondsLeft  Tiempo restante (paralelo a `pending`).
+	 */
+	function pendingSnapshots()
+		external
+		view
+		returns (Proposal[] memory pending, uint256[] memory secondsLeft)
+	{
+		// 1) Contar cuántas siguen pendientes
+		uint256 pendingCount;
+		for (uint256 i; i < queue.length; ) {
+			if (block.timestamp < queue[i].snapshot) pendingCount++;
+			unchecked {
+				i++;
+			}
+		}
+
+		// 2) Llenar arrays de salida
+		pending = new Proposal[](pendingCount);
+		secondsLeft = new uint256[](pendingCount);
+
+		uint256 idx;
+		for (uint256 i; i < queue.length; ) {
+			if (block.timestamp < queue[i].snapshot) {
+				pending[idx] = queue[i];
+				secondsLeft[idx] = queue[i].snapshot - block.timestamp;
+				unchecked {
+					idx++;
+				}
+			}
+			unchecked {
+				i++;
+			}
+		}
 	}
 
 	/**
@@ -221,7 +319,7 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 		s_lastError = err;
 
 		if (response.length > 0) {
-			string memory concatCIDs = abi.decode(response, (string));
+			string memory concatCIDs = string(response);
 			string[] memory cids = _splitByPipe(concatCIDs);
 
 			Proposal[] memory lastProposals = pendingProposals[s_lastRequestId];
