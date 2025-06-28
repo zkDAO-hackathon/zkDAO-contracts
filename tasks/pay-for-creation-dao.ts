@@ -12,10 +12,15 @@ import {
 
 task('pay-for-dao-creation', 'Create a DAO').setAction(async (_, hre) => {
 	try {
-		const { viem, deployments, getNamedAccounts } = hre
+		const { viem, deployments, getNamedAccounts, network } = hre
 		const { deployer } = await getNamedAccounts()
 
+		const chain = network.name
+
 		const publicClient = await viem.getPublicClient()
+
+		console.log('----------------------------------------------------')
+		console.log(`🏗️  Creating DAO on ${chain}...`)
 
 		const { address: zkdaoAddress } = await deployments.get('ZKDAO')
 		const zkdao = await viem.getContractAt('ZKDAO', zkdaoAddress as Address)

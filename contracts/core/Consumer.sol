@@ -122,7 +122,7 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 		uint64 _subscriptionId,
 		uint32 _gasLimit,
 		bytes32 _donID
-	) external onlyOwner returns (bytes32 requestId) {
+	) external returns (bytes32 requestId) {
 		requestId = _sendRequest(_request, _subscriptionId, _gasLimit, _donID);
 
 		s_lastRequestId = requestId;
@@ -145,7 +145,7 @@ contract Consumer is FunctionsClient, ConfirmedOwner, Errors {
 	function sendRequest(
 		SendRequestParams memory _params,
 		Proposal[] memory _proposals
-	) internal onlyOwner returns (bytes32 requestId) {
+	) internal returns (bytes32 requestId) {
 		FunctionsRequest.Request memory req;
 
 		// 1. Build the Functions request

@@ -14,7 +14,7 @@ task('propose', '`Propose to give ${AMOUNT} tokens to an user`').setAction(
 		const publicClient = await viem.getPublicClient()
 
 		console.log('----------------------------------------------------')
-		console.log(`🐘 Proposing... on ${chain}...`)
+		console.log(`🐘 Proposing on ${chain}...`)
 
 		const { address: zkdaoAddress } = await deployments.get('ZKDAO')
 		const zkdao = await viem.getContractAt('ZKDAO', zkdaoAddress as Address)
@@ -26,7 +26,9 @@ task('propose', '`Propose to give ${AMOUNT} tokens to an user`').setAction(
 		const governor = await viem.getContractAt('Governor', dao.governor)
 
 		console.log('----------------------------------------------------')
-		console.log(`🐘 ${user1} proposes to give 3 vote tokens to ${user3} `)
+		console.log(
+			`🐘 ${user1} proposes to give ${AMOUNT} vote tokens to ${user3} `
+		)
 
 		const targets = [dao.token]
 		const values = [0n]
@@ -48,6 +50,6 @@ task('propose', '`Propose to give ${AMOUNT} tokens to an user`').setAction(
 
 		await publicClient.waitForTransactionReceipt({ hash: proposeTx })
 
-		console.log(`✅ User1 delegated votes. tx hash: ${proposeTx}`)
+		console.log(`✅ Proposed. tx hash: ${proposeTx}`)
 	}
 )

@@ -161,7 +161,7 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 			sendRequest(
 				SendRequestParams({
 					source: source,
-					encryptedSecretsUrls: '0x',
+					encryptedSecretsUrls: '',
 					donHostedSecretsSlotID: 0,
 					donHostedSecretsVersion: 0,
 					args: args,

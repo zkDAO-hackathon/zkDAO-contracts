@@ -99,19 +99,58 @@ export const DON_ID: (chain: string) => Hex = (chain: string): Hex => {
 }
 
 export const GOVERNOR_TOKEN_DETERMINISTIC_DEPLOYMENT: Hex =
-	stringToHex('governor-token-v3')
+	stringToHex('governor-token-v4')
 
-export const TIMELOCK_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('timelock-v3')
+export const TIMELOCK_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('timelock-v4')
 
-export const GOVERNOR_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('governor-v3')
+export const GOVERNOR_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('governor-v4')
 
-export const VERIFIER_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('verifier-v3')
+export const VERIFIER_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('verifier-v4')
 
 export const PRICE = parseEther('2') // 5 LINK with 18 decimals
 
 export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
 
-export const SOURCE: string = 'https://example.com/source' // replace with actual source URL
+export const SOURCE = `
+	// No authentication. demonstrate POST with data in body
+	// callgraphql api: https://github.com/trevorblades/countries
+	// docs: https://trevorblades.github.io/countries/queries/continent
+
+	// make HTTP request
+	const url =
+		"https://9134-186-84-89-97.ngrok-free.app/merkle-tree/generate-merkle-trees";
+
+	console.log(\`HTTP POST Request to \${url}\`);
+
+	const response = await Functions.makeHttpRequest({
+		url: url,
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		data: {
+			proposals: args,
+		},
+	});
+
+	if (response.error) {
+		console.error(
+			response.response
+				? \`\${response.response.status},\${response.response.statusText}\`
+				: ""
+		);
+
+		throw Error("Request failed");
+	}
+
+	const { merkleRoots } = response.data;
+
+	if (!merkleRoots) {
+		throw Error(\`No merkle trees found in the response\`);
+	}
+
+	return Functions.encodeString(merkleRoots);
+` // Source code for the Functions job
 
 // Args
 
@@ -124,7 +163,7 @@ export const GOVERNOR_TOKEN_PARAMS = {
 	symbol: tokenSymbol
 }
 
-export const MIN_DELAY: bigint = 300n // 5 minutes
+export const MIN_DELAY: bigint = 150n // 2.5 minutes
 export const proposers: string[] = []
 export const executors: string[] = []
 export const admin: string = zeroAddress
@@ -134,8 +173,8 @@ const description: string = 'DAO for Bogota'
 const logo: string =
 	'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafybeibendwijlnunkx7mpsgre2kquvtlt5tnfk7eeydqegyi4hpmrbxai'
 
-const votingDelay: bigint = 604_800n // 1 week
-const votingPeriod: bigint = 604_800n // 1 week
+const votingDelay: bigint = 150n // 2.5 minutes
+const votingPeriod: bigint = 150n // 2.5 minutes
 const proposalThreshold: bigint = 1n // 0 token
 const quorumFraction: bigint = 4n // 4% of total supply
 
@@ -155,5 +194,5 @@ const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
 
 export const TO: Address[] = [user1, user2, user3]
 
-export const AMOUNT: bigint = parseEther('3') // 3 tokens each
+export const AMOUNT: bigint = parseEther('2') // 3 tokens each
 export const AMOUNTS: bigint[] = [AMOUNT, AMOUNT, AMOUNT]
