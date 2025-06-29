@@ -19,6 +19,7 @@
 		"task:propose": "hardhat propose",
 		"task:castZkVote": "hardhat cast-zk-vote",
 		"task:queue": "hardhat queue",
+		"task:execute": "hardhat execute",
 		"test": "hardhat test",
 		"test:localhost": "hardhat test --network localhost",
 		"typechain": "hardhat typechain"
