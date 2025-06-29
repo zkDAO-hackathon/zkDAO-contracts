@@ -6,6 +6,10 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IVotes} from '@openzeppelin/contracts/governance/utils/IVotes.sol';
 import {TimelockControllerUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol';
 
+import {IRouterClient} from '@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol';
+import {OwnerIsCreator} from '@chainlink/contracts/src/v0.8/shared/access/OwnerIsCreator.sol';
+import {Client} from '@chainlink/contracts-ccip/contracts/libraries/Client.sol';
+
 import {IGovernor} from './interfaces/IGovernor.sol';
 import {IGovernorToken} from './interfaces/IGovernorToken.sol';
 import {ITimeLock} from './interfaces/ITimeLock.sol';
@@ -16,6 +20,16 @@ import {Errors} from './libraries/Errors.sol';
 import {Clone} from './libraries/Clone.sol';
 
 contract ZKDAO is QueueProposalState, Transfer {
+	/// ======================
+	/// ======= Errors =======
+	/// ======================
+
+	error NotEnoughBalance(uint256 currentBalance, uint256 calculatedFees);
+	error NothingToWithdraw();
+	error FailedToWithdrawEth(address owner, address target, uint256 value);
+	error DestinationChainNotAllowlisted(uint64 destinationChainSelector);
+	error InvalidReceiverAddress();
+
 	/// ======================
 	/// ======= Events =======
 	/// ======================
@@ -38,9 +52,35 @@ contract ZKDAO is QueueProposalState, Transfer {
 		address creator
 	);
 
+	event TokensTransferred(
+		bytes32 indexed messageId,
+		uint64 indexed destinationChainSelector,
+		address receiver,
+		address token,
+		uint256 tokenAmount,
+		address feeToken,
+		uint256 fees
+	);
+
 	/// ======================
 	/// ======= Structs ======
 	/// ======================
+
+	struct Implementations {
+		address governorToken;
+		address timelock;
+		address governor;
+		address verifier;
+	}
+
+	struct CcipParams {
+		address linkToken;
+		address ccipRouter;
+		address ccipBnmToken;
+		address ccipLnmToken;
+		address usdcToken;
+		uint64 destinationChainSelector;
+	}
 
 	struct GovernorTokenParams {
 		string name;
@@ -73,41 +113,51 @@ contract ZKDAO is QueueProposalState, Transfer {
 	/// === Storage Variables ===
 	/// =========================
 
-	uint256 private price = 1 ether; // Price to create a DAO in LINK tokens
+	uint256 private price = 5 ether; // Price to create a DAO in LINK tokens
 	uint256 private daoCounter;
 
-	address private factory;
-	IERC20 private linkToken;
 	IGovernorToken private governorToken;
 	ITimeLock private timelock;
 	IVerifier private verifier;
 	IGovernor private governor;
+	IERC20 private linkToken;
+	IRouterClient private ccipRouter;
+	address private factory;
+	uint64 destinationChainSelector;
 
 	mapping(uint256 => Dao) private daos;
 	mapping(uint256 => uint256) private daoIdByProposalId;
 	mapping(address => uint256) private daoIdByAddress;
 	mapping(address => uint256) private nonces;
+	mapping(uint64 => bool) public allowlistedChains;
 
 	receive() external payable {}
 
 	constructor(
-		address _governorToken,
-		address _timelock,
-		address _governor,
-		address _verifier,
-		address _linkAddress,
+		Implementations memory _implementations,
+		CcipParams memory _ccipParams,
 		address _factory,
-		address _router,
+		address _functionsRouter,
 		uint64 _subscriptionId,
 		uint32 _gasLimit,
 		bytes32 _donID,
 		string memory _source
-	) QueueProposalState(_router, _subscriptionId, _gasLimit, _donID, _source) {
-		governorToken = IGovernorToken(_governorToken);
-		timelock = ITimeLock(_timelock);
-		governor = IGovernor(_governor);
-		verifier = IVerifier(_verifier);
-		linkToken = IERC20(_linkAddress);
+	)
+		QueueProposalState(
+			_functionsRouter,
+			_subscriptionId,
+			_gasLimit,
+			_donID,
+			_source
+		)
+	{
+		governorToken = IGovernorToken(_implementations.governorToken);
+		timelock = ITimeLock(_implementations.timelock);
+		governor = IGovernor(_implementations.governor);
+		verifier = IVerifier(_implementations.verifier);
+		linkToken = IERC20(_ccipParams.linkToken);
+		ccipRouter = IRouterClient(_ccipParams.ccipRouter);
+		destinationChainSelector = _ccipParams.destinationChainSelector;
 		factory = _factory;
 	}
 
@@ -129,6 +179,11 @@ contract ZKDAO is QueueProposalState, Transfer {
 		if (daos[daoId].governor != IGovernor(msg.sender)) {
 			revert UNAUTHORIZED();
 		}
+		_;
+	}
+
+	modifier validateReceiver(address _receiver) {
+		if (_receiver == address(0)) revert InvalidReceiverAddress();
 		_;
 	}
 
@@ -329,6 +384,49 @@ contract ZKDAO is QueueProposalState, Transfer {
 		price = _price;
 	}
 
+	function allowlistDestinationChain(
+		uint64 _destinationChainSelector,
+		bool allowed
+	) external {
+		allowlistedChains[_destinationChainSelector] = allowed;
+	}
+
+	function transferTokensPayLINK(
+		address _receiver,
+		address _token,
+		uint256 _amount
+	) external validateReceiver(_receiver) returns (bytes32 messageId) {
+		Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
+			_receiver,
+			_token,
+			_amount,
+			address(linkToken)
+		);
+
+		uint256 fees = ccipRouter.getFee(destinationChainSelector, evm2AnyMessage);
+
+		if (fees > linkToken.balanceOf(address(this)))
+			revert NotEnoughBalance(linkToken.balanceOf(address(this)), fees);
+
+		linkToken.approve(address(ccipRouter), fees);
+
+		IERC20(_token).approve(address(ccipRouter), _amount);
+
+		messageId = ccipRouter.ccipSend(destinationChainSelector, evm2AnyMessage);
+
+		emit TokensTransferred(
+			messageId,
+			destinationChainSelector,
+			_receiver,
+			_token,
+			_amount,
+			address(linkToken),
+			fees
+		);
+
+		return messageId;
+	}
+
 	function recoverFunds(address _token, address _to) external {
 		uint256 amount = _token == NATIVE
 			? address(this).balance
@@ -388,5 +486,32 @@ contract ZKDAO is QueueProposalState, Transfer {
 			});
 
 		IGovernor(_governorClone).initialize(memoryParams, _verifier);
+	}
+
+	function _buildCCIPMessage(
+		address _receiver,
+		address _token,
+		uint256 _amount,
+		address _feeTokenAddress
+	) private pure returns (Client.EVM2AnyMessage memory) {
+		// Set the token amounts
+		Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](
+			1
+		);
+		tokenAmounts[0] = Client.EVMTokenAmount({token: _token, amount: _amount});
+
+		return
+			Client.EVM2AnyMessage({
+				receiver: abi.encode(_receiver),
+				data: '',
+				tokenAmounts: tokenAmounts,
+				extraArgs: Client._argsToBytes(
+					Client.GenericExtraArgsV2({
+						gasLimit: 0,
+						allowOutOfOrderExecution: true
+					})
+				),
+				feeToken: _feeTokenAddress
+			});
 	}
 }

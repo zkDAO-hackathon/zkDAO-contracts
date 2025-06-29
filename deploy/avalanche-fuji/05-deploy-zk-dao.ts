@@ -3,11 +3,15 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import { parseEther } from 'viem'
 
 import {
+	AVALANCHE_FUJI__USDC_TOKEN,
+	AVALANCHE_FUJI_CCIP_BNM_TOKEN,
+	AVALANCHE_FUJI_CCIP_LMN_TOKEN,
 	AVALANCHE_FUJI_DON_ID,
 	AVALANCHE_FUJI_FUNCTIONS_ROUTER,
 	AVALANCHE_FUJI_LINK_TOKEN,
 	AVALANCHE_FUJI_SUBSCRIPTION_ID,
 	developmentChains,
+	ETHEREUM_SEPOLIA_CCIP_DESTION_CHAIN_SELECTOR,
 	GAS_LIMIT,
 	networkConfig,
 	SOURCE
@@ -29,25 +33,46 @@ const deployZkDao: DeployFunction = async function (
 	log('----------------------------------------------------')
 	log('Deploying ZKDAO and waiting for confirmations...')
 
-	const linkTokenAddress: string = AVALANCHE_FUJI_LINK_TOKEN
 	const governorTokenAddress: string = governorToken.address
 	const timeLockAddress: string = timeLock.address
 	const governorAddress: string = governor.address
 	const verifierAddress: string = verifier.address
-	const routerAddress: string = AVALANCHE_FUJI_FUNCTIONS_ROUTER
+
+	const linkTokenAddress: string = AVALANCHE_FUJI_LINK_TOKEN
+	const ccipRouterAddress: string = AVALANCHE_FUJI_FUNCTIONS_ROUTER // Using the same address for Functions Router
+	const ccipBnmTokenAddress: string = AVALANCHE_FUJI_CCIP_BNM_TOKEN // Using LINK token for CCIP BNM
+	const ccipLmnTokenAddress: string = AVALANCHE_FUJI_CCIP_LMN_TOKEN // Using LINK token for CCIP LMN
+	const usdcTokenAddress: string = AVALANCHE_FUJI__USDC_TOKEN // Using LINK token for USDC
+	const avalancheFujiSelector: bigint =
+		ETHEREUM_SEPOLIA_CCIP_DESTION_CHAIN_SELECTOR
+
+	const functionsRouterAddress: string = AVALANCHE_FUJI_FUNCTIONS_ROUTER
 	const subscriptionId: bigint = AVALANCHE_FUJI_SUBSCRIPTION_ID
 	const gasLimit: bigint = GAS_LIMIT
 	const donId: string = AVALANCHE_FUJI_DON_ID
 	const source: string = SOURCE
 
-	const args = [
-		governorTokenAddress,
-		timeLockAddress,
-		governorAddress,
-		verifierAddress,
+	const implementation = {
+		governorToken: governorTokenAddress,
+		timelock: timeLockAddress,
+		governor: governorAddress,
+		verifier: verifierAddress
+	}
+
+	const ccipParams = {
 		linkTokenAddress,
+		ccipRouterAddress,
+		ccipBnmToken: ccipBnmTokenAddress,
+		ccipLmnToken: ccipLmnTokenAddress,
+		usdcToken: usdcTokenAddress,
+		avalancheFujiSelector: avalancheFujiSelector
+	}
+
+	const args = [
+		implementation,
+		ccipParams,
 		factory,
-		routerAddress,
+		functionsRouterAddress,
 		subscriptionId,
 		gasLimit,
 		donId,

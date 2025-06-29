@@ -34,7 +34,7 @@ export class CircuitAPIClient {
 		publicInputs: string[]
 		proof: Uint8Array<ArrayBufferLike>
 	}> {
-		const url = `http://localhost:4000/generate-zk-proof`
+		const url = `http://186.119.111.152:4000/generate-zk-proof`
 		console.log(`🌐 Generating ZK proof at: ${url}`)
 
 		try {

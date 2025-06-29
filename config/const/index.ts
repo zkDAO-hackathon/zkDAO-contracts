@@ -24,28 +24,64 @@ export const BN254_FIELD_MODULUS: bigint = BigInt(
 export const NATIVE: Address = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
 // Ethreum Sepolia
-export const ETHEREUM_SEPOLIA_LINK_TOKEN: Address =
-	'0x779877A7B0D9E8603169DdbD7836e478b4624789' // Sepolia LINK token address
 
+// Functions
 export const ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER: Address =
 	'0xb83E47C2bC239B3bf370bc41e1459A34b41238D0' // Sepolia Function Router address
 
-export const ETHEREUM_SEPOLIA_SUBSCRIPTION_ID: bigint = 5228n // subscription ID
+export const ETHEREUM_SEPOLIA_SUBSCRIPTION_ID: bigint = 5243n // subscription ID
 
 export const ETHEREUM_SEPOLIA_DON_ID: Hex =
 	'0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000' // Sepolia DON ID
 
-// Avalanche Fuji
-export const AVALANCHE_FUJI_LINK_TOKEN: Address =
-	'0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846' // Fuji LINK token address
+// CCIP
+export const ETHEREUM_SEPOLIA_LINK_TOKEN: Address =
+	'0x779877A7B0D9E8603169DdbD7836e478b4624789' // Sepolia LINK token address
 
+export const ETHEREUM_SEPOLIA_CCIP_ROUTER: Address =
+	'0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59' // Sepolia CCIP Router address
+
+export const ETHEREUM_SEPOLIA_CCIP_DESTION_CHAIN_SELECTOR: bigint =
+	16015286601757825753n // Sepolia CCIP Router address
+
+export const ETHEREUM_SEPOLIA_CCIP_BNM_TOKEN: Address =
+	'0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05' // Sepolia CCIP BNM token address
+
+export const ETHEREUM_SEPOLIA_CCIP_LMN_TOKEN: Address =
+	'0x466D489b6d36E7E3b824ef491C225F5830E81cC1' // Sepolia CCIP LMN token address
+
+export const ETHEREUM_SEPOLIA__USDC_TOKEN: Address =
+	'0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6' // Sepolia CCIP USDC token address
+
+// Avalanche Fuji
+
+// Functions
 export const AVALANCHE_FUJI_FUNCTIONS_ROUTER: Address =
 	'0xA9d587a00A31A52Ed70D6026794a8FC5E2F5dCb0' // Fuji Function Router address
 
-export const AVALANCHE_FUJI_SUBSCRIPTION_ID: bigint = 15681n // subscription ID
+export const AVALANCHE_FUJI_SUBSCRIPTION_ID: bigint = 0n // subscription ID
 
 export const AVALANCHE_FUJI_DON_ID: Hex =
 	'0x66756e2d6176616c616e6368652d66756a692d31000000000000000000000000' // Fuji DON ID
+
+// CCIP
+export const AVALANCHE_FUJI_LINK_TOKEN: Address =
+	'0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846' // Fuji LINK token address
+
+export const AVALANCHE_FUJI_CCIP_ROUTER: Address =
+	'0xF694E193200268f9a4868e4Aa017A0118C9a8177' // Fuji CCIP Router address
+
+export const AVALANCHE_FUJI_CCIP_DESTION_CHAIN_SELECTOR: bigint =
+	14767482510784806043n // Fuji CCIP Router address
+
+export const AVALANCHE_FUJI_CCIP_BNM_TOKEN: Address =
+	'0xD21341536c5cF5EB1bcb58f6723cE26e8D8E90e4' // Fuji CCIP BNM token address
+
+export const AVALANCHE_FUJI_CCIP_LMN_TOKEN: Address =
+	'0x70F5c5C40b873EA597776DA2C21929A8282A3b35' // Fuji CCIP LMN token address
+
+export const AVALANCHE_FUJI__USDC_TOKEN: Address =
+	'0x7bA2e5c37C4151d654Fcc4b41ffF3Fe693c23852' // Fuji CCIP USDC token address
 
 // Common
 export const LINK_TOKEN: (chain: string) => Address = (
@@ -103,12 +139,12 @@ export const GOVERNOR_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('governor-v4')
 
 export const VERIFIER_DETERMINISTIC_DEPLOYMENT: Hex = stringToHex('verifier-v4')
 
-export const PRICE = parseEther('1') // 1 LINK with 18 decimals
+export const PRICE = parseEther('5') // 1 LINK with 18 decimals
 
 export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
 
 export const SOURCE = `
-	const url = "https://fa84-186-84-88-137.ngrok-free.app/merkle-tree/generate-merkle-trees";
+	const url = "http://186.119.111.152:4001/merkle-tree/generate-merkle-trees";
 
 	const response = await Functions.makeHttpRequest({
 		url,

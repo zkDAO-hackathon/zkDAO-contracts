@@ -24,7 +24,9 @@
 		"test:localhost": "hardhat test --network localhost",
 		"typechain": "hardhat typechain"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@chainlink/contracts-ccip": "^1.6.0"
+	},
 	"devDependencies": {
 		"@aztec/bb.js": "^0.87.9",
 		"@chainlink/contracts": "^1.4.0",
