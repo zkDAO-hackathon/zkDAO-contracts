@@ -1,6 +1,10 @@
 // utils/verify.ts
 import { run } from 'hardhat'
 
+function sleep(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 export const verify = async (
 	contractAddress: string,
 	args: unknown[]
@@ -8,8 +12,8 @@ export const verify = async (
 	console.log('Verifying contract...')
 
 	try {
-		console.log('⏳ Waiting 9 seconds for Etherscan to index the contract...')
-
+		console.log('⏳ Waiting 18 seconds for Etherscan to index the contract...')
+		await sleep(18000) // Wait for 18 seconds to ensure Etherscan has indexed the contract
 		await run('verify:verify', {
 			address: contractAddress,
 			constructorArguments: args
