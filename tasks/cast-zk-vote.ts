@@ -10,7 +10,7 @@ import {
 import { CircuitAPIClient } from '@/api/circuit-proof'
 import { MerkleProofAPIClient } from '@/api/merkle-proof'
 import { AMOUNT } from '@/config/const'
-import { DaoStruct } from '@/models'
+import { DaoStruct, ProposalStruct } from '@/models'
 
 task('cast-zk-vote', 'Cast a ZK vote to give tokens to an user').setAction(
 	async (_, hre) => {
@@ -37,12 +37,17 @@ task('cast-zk-vote', 'Cast a ZK vote to give tokens to an user').setAction(
 
 		const governor = await viem.getContractAt('Governor', dao.governor)
 		const proposalCounter = await governor.read.getProposalCounter()
-		const proposalId = await governor.read.getProposalId([proposalCounter])
 
-		const proposalIdString = (proposalId as string | number | bigint).toString()
+		const proposal = (await governor.read.getProposal([
+			proposalCounter
+		])) as ProposalStruct
+
+		const proposalIdString = (
+			proposal.id as string | number | bigint
+		).toString()
 
 		console.log('----------------------------------------------------')
-		console.log(`🤐 Generating ZK proof for proposal ${proposalId}...`)
+		console.log(`🤐 Generating ZK proof for proposal ${proposalIdString}...`)
 
 		const hashedMessage = keccak256(
 			toBytes(`Add ${user3} to the DAO and give them ${AMOUNT} tokens`)
@@ -99,7 +104,7 @@ task('cast-zk-vote', 'Cast a ZK vote to give tokens to an user').setAction(
 		console.log(`🤐 ${user1} is voting Anonymously...`)
 
 		const castZKVoteTx = await governor.write.castZKVote(
-			[proposalId, zkproof.proofBytes, zkproof.publicInputs],
+			[proposal.id, zkproof.proofBytes, zkproof.publicInputs],
 			{ account: user1 }
 		)
 

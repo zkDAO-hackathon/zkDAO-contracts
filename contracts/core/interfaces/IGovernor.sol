@@ -39,6 +39,14 @@ interface IGovernor {
 		// mapping(uint256 => bool) hasNullified;
 	}
 
+	struct ProposalStorage {
+		uint256 id;
+		uint256 proposalNumber;
+		uint256 createdAt;
+		address proposer;
+		string description;
+	}
+
 	/// ======================
 	/// ======= Events =======
 	/// ======================
@@ -84,7 +92,7 @@ interface IGovernor {
 	 * @param proposalId The proposal ID
 	 * @return The merkle root
 	 */
-	function getRoot(uint256 proposalId) external view returns (string memory);
+	function getCid(uint256 proposalId) external view returns (string memory);
 
 	/**
 	 * @notice Get ZK voting results for a proposal
@@ -100,24 +108,7 @@ interface IGovernor {
 		view
 		returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes);
 
-	/**
-	 * @notice Check if a proposal is waiting for merkle root
-	 * @param proposalId The proposal ID
-	 * @return True if waiting for merkle root
-	 */
 	function isWaitingMerkle(uint256 proposalId) external view returns (bool);
-
-	/**
-	 * @notice Get the verifier contract address
-	 * @return The verifier contract
-	 */
-	function verifier() external view returns (IVerifier);
-
-	/**
-	 * @notice Get the DAO ID
-	 * @return The DAO identifier
-	 */
-	function id() external view returns (uint256);
 
 	/// =================================
 	/// == External / Public Functions ==

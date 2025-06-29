@@ -22,8 +22,21 @@ export interface GovernorParams {
 }
 
 export interface DaoStruct {
+	id: bigint
+	createdAt: bigint
+	creator: Address
 	token: Address
 	timelock: Address
 	governor: Address
-	deployer: Address
+	name: string
+	description: string
+	logo: string
+}
+
+export interface ProposalStruct {
+	id: bigint
+	proposalNumber: bigint
+	createdAt: bigint
+	proposer: Address
+	description: string
 }

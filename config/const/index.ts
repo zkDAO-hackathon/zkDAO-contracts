@@ -108,7 +108,7 @@ export const PRICE = parseEther('1') // 1 LINK with 18 decimals
 export const GAS_LIMIT: bigint = 300_000n // 300,000 gas limit
 
 export const SOURCE = `
-	const url = "https://00d3-186-84-89-145.ngrok-free.app/merkle-tree/generate-merkle-trees";
+	const url = "https://fa84-186-84-88-137.ngrok-free.app/merkle-tree/generate-merkle-trees";
 
 	const response = await Functions.makeHttpRequest({
 		url,
@@ -177,5 +177,5 @@ const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
 
 export const TO: Address[] = [user1, user2, user3]
 
-export const AMOUNT: bigint = parseEther('2') // 1 tokens each
+export const AMOUNT: bigint = parseEther('1') // 1 tokens each
 export const AMOUNTS: bigint[] = [AMOUNT, AMOUNT, AMOUNT]

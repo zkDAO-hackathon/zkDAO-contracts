@@ -32,18 +32,17 @@ contract Governor is
 	/// === Storage Variables ===
 	/// =========================
 
-	mapping(uint256 => uint256) private proposalsIds;
-	mapping(uint256 => string) private cids;
-	mapping(uint256 => ZKProposalVote) private zkVotes;
-	mapping(uint256 => mapping(uint256 => bool)) private nullifierUsed;
-
-	IVerifier public verifier;
-	IZKDAO public zkDao;
-
 	uint256 private proposalCounter;
-	uint256 public id;
-	string public description;
-	string public logo;
+	uint256 private id;
+	IVerifier private verifier;
+	IZKDAO private zkDao;
+	string private description;
+	string private logo;
+
+	mapping(uint256 => ProposalStorage) private proposals;
+	mapping(uint256 => ZKProposalVote) private zkVotes;
+	mapping(uint256 => string) private cids;
+	mapping(uint256 => mapping(uint256 => bool)) private nullifierUsed;
 
 	/// =========================
 	/// ====== Constructor ======
@@ -96,41 +95,69 @@ contract Governor is
 		return proposalCounter;
 	}
 
-	function getProposalId(uint256 _proposalId) external view returns (uint256) {
-		return proposalsIds[_proposalId];
+	function getId() external view returns (uint256) {
+		return id;
 	}
 
-	function getNullifierUsed(
-		uint256 proposalId,
-		uint256 nullifier
-	) external view override returns (bool) {
-		return nullifierUsed[proposalId][nullifier];
+	function getVerifier() external view returns (IVerifier) {
+		return verifier;
 	}
 
-	function getRoot(
-		uint256 proposalId
-	) external view override returns (string memory) {
-		return cids[proposalId];
+	function getZKDAO() external view returns (IZKDAO) {
+		return zkDao;
+	}
+
+	function getDescription() external view returns (string memory) {
+		return description;
+	}
+
+	function getLogo() external view returns (string memory) {
+		return logo;
+	}
+
+	function getProposal(
+		uint256 _id
+	) external view returns (ProposalStorage memory) {
+		return proposals[_id];
 	}
 
 	function getZKVote(
-		uint256 proposalId
+		uint256 _id
 	)
 		external
 		view
 		override
 		returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)
 	{
-		ZKProposalVote storage p = zkVotes[proposalId];
+		ZKProposalVote storage p = zkVotes[_id];
 		return (p.againstVotes, p.forVotes, p.abstainVotes);
 	}
 
-	function isWaitingMerkle(
-		uint256 proposalId
-	) public view override returns (bool) {
+	function getNullifierUsed(
+		uint256 _id,
+		uint256 nullifier
+	) external view override returns (bool) {
+		return nullifierUsed[_id][nullifier];
+	}
+
+	function getCid(uint256 _id) external view override returns (string memory) {
+		return cids[_id];
+	}
+
+	function timeLeft(uint256 _id) external view returns (uint256) {
+		uint256 leftTime = 0;
+		if (state(_id) == ProposalState.Active) {
+			leftTime = proposalSnapshot(_id) + votingPeriod() - block.timestamp;
+		}
+		if (leftTime < 0) {
+			leftTime = 0;
+		}
+		return leftTime;
+	}
+
+	function isWaitingMerkle(uint256 _id) public view override returns (bool) {
 		return
-			super.state(proposalId) == ProposalState.Pending &&
-			bytes(cids[proposalId]).length == 0;
+			super.state(_id) == ProposalState.Pending && bytes(cids[_id]).length == 0;
 	}
 
 	/// =================================
@@ -252,7 +279,13 @@ contract Governor is
 		);
 
 		proposalCounter++;
-		proposalsIds[proposalCounter] = proposalId;
+		proposals[proposalCounter] = ProposalStorage({
+			id: proposalId,
+			proposalNumber: proposalCounter,
+			createdAt: block.timestamp,
+			proposer: proposer,
+			description: _description
+		});
 
 		uint256 snapshot = proposalSnapshot(proposalId);
 

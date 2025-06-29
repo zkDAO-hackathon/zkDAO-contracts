@@ -26,7 +26,8 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		uint256 indexed proposalId,
 		uint256 snapshot,
 		uint256 proposalBlock,
-		address voteToken
+		address voteToken,
+		string[] args
 	);
 
 	/// =========================
@@ -151,7 +152,8 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 					p.proposalId,
 					p.snapshot,
 					p.proposalBlock,
-					p.voteToken
+					p.voteToken,
+					args
 				);
 
 				index++;

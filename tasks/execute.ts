@@ -2,7 +2,7 @@ import { task } from 'hardhat/config'
 import { type Address, encodeFunctionData, keccak256, toBytes } from 'viem'
 
 import { AMOUNT } from '@/config/const'
-import { DaoStruct } from '@/models'
+import { DaoStruct, ProposalStruct } from '@/models'
 
 task('execute', 'Execute a proposal to give tokens to an user').setAction(
 	async (_, hre) => {
@@ -26,10 +26,12 @@ task('execute', 'Execute a proposal to give tokens to an user').setAction(
 		const governor = await viem.getContractAt('Governor', dao.governor)
 
 		const proposalCounter = await governor.read.getProposalCounter()
-		const proposalId = await governor.read.getProposalId([proposalCounter])
+		const proposal = (await governor.read.getProposal([
+			proposalCounter
+		])) as ProposalStruct
 
 		console.log('----------------------------------------------------')
-		console.log(`🎇 ${user1} Executing proposal ${proposalId}`)
+		console.log(`🎇 ${user1} Executing proposal ${proposal.id}`)
 
 		const targets = [dao.token]
 		const values = [0n]
@@ -42,7 +44,7 @@ task('execute', 'Execute a proposal to give tokens to an user').setAction(
 
 		const calldatas = [mintCallData]
 
-		const description = `DAO for Bogota`
+		const description = `Add ${user3} to the DAO and give them ${AMOUNT} tokens`
 
 		const descriptionHash = keccak256(toBytes(description))
 
@@ -55,6 +57,6 @@ task('execute', 'Execute a proposal to give tokens to an user').setAction(
 			hash: executeTx
 		})
 
-		console.log(`✅ Executed proposal ${proposalId}. tx hash: ${executeTx}`)
+		console.log(`✅ Executed proposal ${proposal.id}. tx hash: ${executeTx}`)
 	}
 )

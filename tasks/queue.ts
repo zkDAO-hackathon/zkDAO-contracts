@@ -2,7 +2,7 @@ import { task } from 'hardhat/config'
 import { type Address, encodeFunctionData, keccak256, toBytes } from 'viem'
 
 import { AMOUNT } from '@/config/const'
-import { DaoStruct } from '@/models'
+import { DaoStruct, ProposalStruct } from '@/models'
 
 task('queue', 'Queue a proposal to give tokens to an user').setAction(
 	async (_, hre) => {
@@ -26,10 +26,12 @@ task('queue', 'Queue a proposal to give tokens to an user').setAction(
 		const governor = await viem.getContractAt('Governor', dao.governor)
 
 		const proposalCounter = await governor.read.getProposalCounter()
-		const proposalId = await governor.read.getProposalId([proposalCounter])
+		const proposal = (await governor.read.getProposal([
+			proposalCounter
+		])) as ProposalStruct
 
 		console.log('----------------------------------------------------')
-		console.log(`🏁 ${user1} Moving proposal ${proposalId} to queue`)
+		console.log(`🏁 ${user1} Moving proposal ${proposal.id} to queue`)
 
 		const targets = [dao.token]
 		const values = [0n]
@@ -55,6 +57,6 @@ task('queue', 'Queue a proposal to give tokens to an user').setAction(
 			hash: queueTx
 		})
 
-		console.log(`✅ Queued proposal ${proposalId}. tx hash: ${queueTx}`)
+		console.log(`✅ Queued proposal ${proposal.id}. tx hash: ${queueTx}`)
 	}
 )
