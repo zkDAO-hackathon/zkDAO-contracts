@@ -30,7 +30,7 @@ export const ETHEREUM_SEPOLIA_LINK_TOKEN: Address =
 export const ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER: Address =
 	'0xb83E47C2bC239B3bf370bc41e1459A34b41238D0' // Sepolia Function Router address
 
-export const ETHEREUM_SEPOLIA_SUBSCRIPTION_ID: bigint = 5226n // subscription ID
+export const ETHEREUM_SEPOLIA_SUBSCRIPTION_ID: bigint = 5228n // subscription ID
 
 export const ETHEREUM_SEPOLIA_DON_ID: Hex =
 	'0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000' // Sepolia DON ID
@@ -157,7 +157,7 @@ const logo: string =
 	'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafybeibendwijlnunkx7mpsgre2kquvtlt5tnfk7eeydqegyi4hpmrbxai'
 
 const votingDelay: bigint = 150n // 2.5 minutes
-const votingPeriod: bigint = 150n // 2.5 minutes
+const votingPeriod: bigint = 500n // 5 minutes
 const proposalThreshold: bigint = 1n // 0 token
 const quorumFraction: bigint = 4n // 4% of total supply
 
@@ -177,5 +177,5 @@ const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
 
 export const TO: Address[] = [user1, user2, user3]
 
-export const AMOUNT: bigint = parseEther('0.07') // 3 tokens each
+export const AMOUNT: bigint = parseEther('2') // 1 tokens each
 export const AMOUNTS: bigint[] = [AMOUNT, AMOUNT, AMOUNT]

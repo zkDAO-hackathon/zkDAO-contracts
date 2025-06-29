@@ -169,7 +169,6 @@ contract Governor is
 	/// ===== Override Functions ====
 	/// =============================
 
-	/// @dev quorum = forVotes+abstainVotes (normales) + ZK
 	function _quorumReached(
 		uint256 proposalId
 	)
@@ -178,25 +177,22 @@ contract Governor is
 		override(GovernorUpgradeable, GovernorCountingSimpleUpgradeable)
 		returns (bool)
 	{
-		// votos registrados por la lógica OZ
 		bool quorumNormal = super._quorumReached(proposalId);
 
-		// votos ZK
 		ZKProposalVote storage p = zkVotes[proposalId];
 		uint256 forZK = p.forVotes;
 		uint256 abstainZK = p.abstainVotes;
 		uint256 extra = forZK + abstainZK;
 
-		if (extra == 0) return quorumNormal; // atajo barato
+		if (extra == 0) return quorumNormal;
 
 		uint256 required = quorum(proposalSnapshot(proposalId));
 
-		// lee el total “normal” usando la vista pública
 		(
 			uint256 againstNormal,
 			uint256 forNormal,
 			uint256 abstainNormal
-		) = proposalVotes(proposalId); // usa OZ GovernorCountingSimple's public getter
+		) = proposalVotes(proposalId);
 
 		return (forNormal + abstainNormal + extra) >= required;
 	}
@@ -251,7 +247,7 @@ contract Governor is
 			targets,
 			values,
 			calldatas,
-			description,
+			_description,
 			proposer
 		);
 
@@ -271,9 +267,8 @@ contract Governor is
 		return proposalId;
 	}
 
-	/**
-	 * @notice Override _countVote to handle both regular and ZK votes
-	 */
+	// The following functions are overrides required by Solidity.
+
 	function _countVote(
 		uint256 proposalId,
 		address account,
@@ -307,9 +302,6 @@ contract Governor is
 		return super._countVote(proposalId, account, support, weight, params);
 	}
 
-	/**
-	 * @notice Override state to handle waiting for merkle root
-	 */
 	function state(
 		uint256 proposalId
 	)
@@ -318,46 +310,29 @@ contract Governor is
 		override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
 		returns (ProposalState)
 	{
-		ProposalState current = GovernorUpgradeable.state(proposalId);
-
-		if (isWaitingMerkle(proposalId)) {
-			return ProposalState.Pending;
-		}
-
-		return current;
+		return super.state(proposalId);
 	}
 
-	/**
-	 * @notice Override _cancel for timelock integration
-	 */
-	function _cancel(
-		address[] memory targets,
-		uint256[] memory values,
-		bytes[] memory calldatas,
-		bytes32 descriptionHash
+	function proposalNeedsQueuing(
+		uint256 proposalId
 	)
-		internal
-		override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
-		returns (uint256)
-	{
-		return super._cancel(targets, values, calldatas, descriptionHash);
-	}
-
-	/**
-	 * @notice Override _executor for timelock integration
-	 */
-	function _executor()
-		internal
+		public
 		view
 		override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
-		returns (address)
+		returns (bool)
 	{
-		return super._executor();
+		return super.proposalNeedsQueuing(proposalId);
 	}
 
-	/**
-	 * @notice Override _queueOperations for timelock integration
-	 */
+	function proposalThreshold()
+		public
+		view
+		override(GovernorUpgradeable, GovernorSettingsUpgradeable)
+		returns (uint256)
+	{
+		return super.proposalThreshold();
+	}
+
 	function _queueOperations(
 		uint256 proposalId,
 		address[] memory targets,
@@ -379,9 +354,6 @@ contract Governor is
 			);
 	}
 
-	/**
-	 * @notice Override _executeOperations for timelock integration
-	 */
 	function _executeOperations(
 		uint256 proposalId,
 		address[] memory targets,
@@ -398,121 +370,25 @@ contract Governor is
 		);
 	}
 
-	/**
-	 * @notice Override proposalNeedsQueuing for timelock integration
-	 */
-	function proposalNeedsQueuing(
-		uint256 proposalId
+	function _cancel(
+		address[] memory targets,
+		uint256[] memory values,
+		bytes[] memory calldatas,
+		bytes32 descriptionHash
 	)
-		public
+		internal
+		override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
+		returns (uint256)
+	{
+		return super._cancel(targets, values, calldatas, descriptionHash);
+	}
+
+	function _executor()
+		internal
 		view
 		override(GovernorUpgradeable, GovernorTimelockControlUpgradeable)
-		returns (bool)
+		returns (address)
 	{
-		return super.proposalNeedsQueuing(proposalId);
-	}
-
-	/**
-	 * @notice Override proposalThreshold for settings integration
-	 */
-	function proposalThreshold()
-		public
-		view
-		override(GovernorUpgradeable, GovernorSettingsUpgradeable)
-		returns (uint256)
-	{
-		return super.proposalThreshold();
-	}
-
-	/**
-	 * @notice Override supportsInterface for interface detection
-	 */
-	function supportsInterface(
-		bytes4 interfaceId
-	) public view virtual override(GovernorUpgradeable) returns (bool) {
-		return super.supportsInterface(interfaceId);
-	}
-
-	/**
-	 * @notice Override clock for votes integration
-	 */
-	function clock()
-		public
-		view
-		override(GovernorUpgradeable, GovernorVotesUpgradeable)
-		returns (uint48)
-	{
-		return super.clock();
-	}
-
-	/**
-	 * @notice Override CLOCK_MODE for votes integration
-	 */
-	function CLOCK_MODE()
-		public
-		view
-		override(GovernorUpgradeable, GovernorVotesUpgradeable)
-		returns (string memory)
-	{
-		return super.CLOCK_MODE();
-	}
-
-	/**
-	 * @notice Override quorum for quorum fraction integration
-	 */
-	function quorum(
-		uint256 blockNumber
-	)
-		public
-		view
-		override(GovernorUpgradeable, GovernorVotesQuorumFractionUpgradeable)
-		returns (uint256)
-	{
-		return super.quorum(blockNumber);
-	}
-
-	/**
-	 * @notice Override getVotes for votes integration
-	 */
-	function getVotes(
-		address account,
-		uint256 blockNumber
-	) public view override(GovernorUpgradeable) returns (uint256) {
-		return super.getVotes(account, blockNumber);
-	}
-
-	/**
-	 * @notice Override getVotesWithParams for votes integration
-	 */
-	function getVotesWithParams(
-		address account,
-		uint256 blockNumber,
-		bytes memory params
-	) public view override(GovernorUpgradeable) returns (uint256) {
-		return super.getVotesWithParams(account, blockNumber, params);
-	}
-
-	/**
-	 * @notice Override votingDelay for settings integration
-	 */
-	function votingDelay()
-		public
-		view
-		override(GovernorUpgradeable, GovernorSettingsUpgradeable)
-		returns (uint256)
-	{
-		return super.votingDelay();
-	}
-
-	/**
-	 * @notice Override votingPeriod for settings integration
-	 */
-	function votingPeriod()
-		public
-		view
-		override(GovernorUpgradeable, GovernorSettingsUpgradeable)
-		returns (uint256)
-	{
-		return super.votingPeriod();
+		return super._executor();
 	}
 }
