@@ -3,13 +3,14 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import { parseEther } from 'viem'
 
 import {
-	AVALANCHE_FUJI__USDC_TOKEN,
 	AVALANCHE_FUJI_CCIP_BNM_TOKEN,
 	AVALANCHE_FUJI_CCIP_LMN_TOKEN,
+	AVALANCHE_FUJI_CCIP_ROUTER,
 	AVALANCHE_FUJI_DON_ID,
 	AVALANCHE_FUJI_FUNCTIONS_ROUTER,
 	AVALANCHE_FUJI_LINK_TOKEN,
 	AVALANCHE_FUJI_SUBSCRIPTION_ID,
+	AVALANCHE_FUJI_USDC_TOKEN,
 	developmentChains,
 	ETHEREUM_SEPOLIA_CCIP_DESTION_CHAIN_SELECTOR,
 	GAS_LIMIT,
@@ -39,10 +40,10 @@ const deployZkDao: DeployFunction = async function (
 	const verifierAddress: string = verifier.address
 
 	const linkTokenAddress: string = AVALANCHE_FUJI_LINK_TOKEN
-	const ccipRouterAddress: string = AVALANCHE_FUJI_FUNCTIONS_ROUTER // Using the same address for Functions Router
+	const ccipRouterAddress: string = AVALANCHE_FUJI_CCIP_ROUTER // Using the same address for Functions Router
 	const ccipBnmTokenAddress: string = AVALANCHE_FUJI_CCIP_BNM_TOKEN // Using LINK token for CCIP BNM
-	const ccipLmnTokenAddress: string = AVALANCHE_FUJI_CCIP_LMN_TOKEN // Using LINK token for CCIP LMN
-	const usdcTokenAddress: string = AVALANCHE_FUJI__USDC_TOKEN // Using LINK token for USDC
+	const ccipLnmTokenAddress: string = AVALANCHE_FUJI_CCIP_LMN_TOKEN // Using LINK token for CCIP LMN
+	const usdcTokenAddress: string = AVALANCHE_FUJI_USDC_TOKEN // Using LINK token for USDC
 	const avalancheFujiSelector: bigint =
 		ETHEREUM_SEPOLIA_CCIP_DESTION_CHAIN_SELECTOR
 
@@ -60,12 +61,12 @@ const deployZkDao: DeployFunction = async function (
 	}
 
 	const ccipParams = {
-		linkTokenAddress,
-		ccipRouterAddress,
+		linkToken: linkTokenAddress,
+		ccipRouter: ccipRouterAddress,
 		ccipBnmToken: ccipBnmTokenAddress,
-		ccipLmnToken: ccipLmnTokenAddress,
+		ccipLnmToken: ccipLnmTokenAddress,
 		usdcToken: usdcTokenAddress,
-		avalancheFujiSelector: avalancheFujiSelector
+		destinationChainSelector: avalancheFujiSelector
 	}
 
 	const args = [

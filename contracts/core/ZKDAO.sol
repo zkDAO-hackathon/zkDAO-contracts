@@ -123,11 +123,13 @@ contract ZKDAO is QueueProposalState, Transfer {
 	IERC20 private linkToken;
 	IRouterClient private ccipRouter;
 	address private factory;
-	uint64 destinationChainSelector;
+	uint64 private destinationChainSelector;
 
 	mapping(uint256 => Dao) private daos;
 	mapping(uint256 => uint256) private daoIdByProposalId;
 	mapping(address => uint256) private daoIdByAddress;
+	mapping(address => uint256) private daoIdByTimelock;
+
 	mapping(address => uint256) private nonces;
 	mapping(uint64 => bool) public allowlistedChains;
 
@@ -182,6 +184,18 @@ contract ZKDAO is QueueProposalState, Transfer {
 		_;
 	}
 
+	modifier onlyTimelock() {
+		uint256 daoId = daoIdByTimelock[msg.sender];
+		if (daoId == 0) {
+			revert DAO_NOT_FOUND(daoId);
+		}
+
+		if (daos[daoId].timelock != ITimeLock(msg.sender)) {
+			revert UNAUTHORIZED();
+		}
+		_;
+	}
+
 	modifier validateReceiver(address _receiver) {
 		if (_receiver == address(0)) revert InvalidReceiverAddress();
 		_;
@@ -221,8 +235,24 @@ contract ZKDAO is QueueProposalState, Transfer {
 		);
 	}
 
-	function getNonce(address account) external view returns (uint256) {
-		return nonces[account];
+	function getLinkToken() external view returns (IERC20) {
+		return linkToken;
+	}
+
+	function getCcipRouter() external view returns (IRouterClient) {
+		return ccipRouter;
+	}
+
+	function getFactory() external view returns (address) {
+		return factory;
+	}
+
+	function getDestinationChainSelector() external view returns (uint64) {
+		return destinationChainSelector;
+	}
+
+	function getNonce() external view returns (uint256) {
+		return nonces[msg.sender];
 	}
 
 	function getDaoId(address account) external view returns (uint256) {
@@ -246,6 +276,14 @@ contract ZKDAO is QueueProposalState, Transfer {
 		}
 
 		return daos[id];
+	}
+
+	function getTreasury() external view returns (uint256) {
+		return address(this).balance;
+	}
+
+	function getBalance(address _token, address _account) external view {
+		_getBalance(_token, _account);
 	}
 
 	function payForDaoCreation(
@@ -338,6 +376,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 		IGovernorToken(tokenClone).mintBatch(_to, _amounts);
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
 
+		daoIdByTimelock[timelockClone] = id;
 		daoIdByAddress[governorClone] = id;
 		daos[id] = Dao({
 			id: id,
@@ -395,7 +434,12 @@ contract ZKDAO is QueueProposalState, Transfer {
 		address _receiver,
 		address _token,
 		uint256 _amount
-	) external validateReceiver(_receiver) returns (bytes32 messageId) {
+	)
+		external
+		onlyTimelock
+		validateReceiver(_receiver)
+		returns (bytes32 messageId)
+	{
 		Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
 			_receiver,
 			_token,

@@ -58,6 +58,16 @@ interface IGovernor {
 		bytes32 nullifier
 	);
 
+	event TokensTransferred(
+		bytes32 indexed messageId,
+		uint64 indexed destinationChainSelector,
+		address receiver,
+		address token,
+		uint256 tokenAmount,
+		address feeToken,
+		uint256 fees
+	);
+
 	/// =========================
 	/// ====== Initializer ======
 	/// =========================

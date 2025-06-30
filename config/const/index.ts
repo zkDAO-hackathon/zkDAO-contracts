@@ -50,7 +50,7 @@ export const ETHEREUM_SEPOLIA_CCIP_BNM_TOKEN: Address =
 export const ETHEREUM_SEPOLIA_CCIP_LMN_TOKEN: Address =
 	'0x466D489b6d36E7E3b824ef491C225F5830E81cC1' // Sepolia CCIP LMN token address
 
-export const ETHEREUM_SEPOLIA__USDC_TOKEN: Address =
+export const ETHEREUM_SEPOLIA_USDC_TOKEN: Address =
 	'0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6' // Sepolia CCIP USDC token address
 
 // Avalanche Fuji
@@ -80,7 +80,7 @@ export const AVALANCHE_FUJI_CCIP_BNM_TOKEN: Address =
 export const AVALANCHE_FUJI_CCIP_LMN_TOKEN: Address =
 	'0x70F5c5C40b873EA597776DA2C21929A8282A3b35' // Fuji CCIP LMN token address
 
-export const AVALANCHE_FUJI__USDC_TOKEN: Address =
+export const AVALANCHE_FUJI_USDC_TOKEN: Address =
 	'0x7bA2e5c37C4151d654Fcc4b41ffF3Fe693c23852' // Fuji CCIP USDC token address
 
 // Common
@@ -91,6 +91,18 @@ export const LINK_TOKEN: (chain: string) => Address = (
 		return ETHEREUM_SEPOLIA_LINK_TOKEN
 	} else if (chain === 'avalancheFuji') {
 		return AVALANCHE_FUJI_LINK_TOKEN
+	} else {
+		throw new Error(`Unsupported chain: ${chain}`)
+	}
+}
+
+export const CCIP_BNM_TOKEN: (chain: string) => Address = (
+	chain: string
+): Address => {
+	if (chain === 'ethereumSepolia') {
+		return ETHEREUM_SEPOLIA_CCIP_BNM_TOKEN
+	} else if (chain === 'avalancheFuji') {
+		return AVALANCHE_FUJI_CCIP_BNM_TOKEN
 	} else {
 		throw new Error(`Unsupported chain: ${chain}`)
 	}
@@ -192,8 +204,8 @@ const description: string = 'DAO for Bogota'
 const logo: string =
 	'https://black-fast-chipmunk-543.mypinata.cloud/ipfs/bafybeibendwijlnunkx7mpsgre2kquvtlt5tnfk7eeydqegyi4hpmrbxai'
 
-const votingDelay: bigint = 150n // 2.5 minutes
-const votingPeriod: bigint = 500n // 5 minutes
+const votingDelay: bigint = 100n // 1.67 minutes
+const votingPeriod: bigint = 150n // 2.5 minutes
 const proposalThreshold: bigint = 1n // 0 token
 const quorumFraction: bigint = 4n // 4% of total supply
 
@@ -213,5 +225,5 @@ const user3: Address = '0xD96B642Ca70edB30e58248689CEaFc6E36785d68'
 
 export const TO: Address[] = [user1, user2, user3]
 
-export const AMOUNT: bigint = parseEther('1') // 1 tokens each
+export const AMOUNT: bigint = parseEther('0.1') // 1 tokens each
 export const AMOUNTS: bigint[] = [AMOUNT, AMOUNT, AMOUNT]

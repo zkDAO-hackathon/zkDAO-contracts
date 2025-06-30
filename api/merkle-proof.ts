@@ -13,7 +13,7 @@ interface MerkleProof {
 export class MerkleProofAPIClient {
 	private baseUrl: string
 
-	constructor(baseUrl: string = 'http://localhost:3000') {
+	constructor(baseUrl: string = 'http://186.119.111.152:4001') {
 		this.baseUrl = baseUrl
 	}
 
@@ -22,7 +22,7 @@ export class MerkleProofAPIClient {
 		proposalId: string,
 		address: string
 	): Promise<MerkleProof> {
-		const url = `http://localhost:3000/merkle-tree/getMerkleProof/${dao}/proposals/${proposalId}/${address}`
+		const url = `http://186.119.111.152:4001/merkle-tree/getMerkleProof/${dao}/proposals/${proposalId}/${address}`
 		console.log(`🌐 Fetching Merkle proof from: ${url}`)
 
 		try {

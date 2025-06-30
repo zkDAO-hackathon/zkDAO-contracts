@@ -4,13 +4,14 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import {
 	AVALANCHE_FUJI_CCIP_DESTION_CHAIN_SELECTOR,
 	developmentChains,
-	ETHEREUM_SEPOLIA__USDC_TOKEN,
 	ETHEREUM_SEPOLIA_CCIP_BNM_TOKEN,
 	ETHEREUM_SEPOLIA_CCIP_LMN_TOKEN,
+	ETHEREUM_SEPOLIA_CCIP_ROUTER,
 	ETHEREUM_SEPOLIA_DON_ID,
 	ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER,
 	ETHEREUM_SEPOLIA_LINK_TOKEN,
 	ETHEREUM_SEPOLIA_SUBSCRIPTION_ID,
+	ETHEREUM_SEPOLIA_USDC_TOKEN,
 	GAS_LIMIT,
 	networkConfig,
 	SOURCE
@@ -38,10 +39,10 @@ const deployZkDao: DeployFunction = async function (
 	const verifierAddress: string = verifier.address
 
 	const linkTokenAddress: string = ETHEREUM_SEPOLIA_LINK_TOKEN
-	const ccipRouterAddress: string = ETHEREUM_SEPOLIA_FUNCTIONS_ROUTER // Using the same address for Functions Router
+	const ccipRouterAddress: string = ETHEREUM_SEPOLIA_CCIP_ROUTER // Using the same address for Functions Router
 	const ccipBnmTokenAddress: string = ETHEREUM_SEPOLIA_CCIP_BNM_TOKEN // Using LINK token for CCIP BNM
-	const ccipLmnTokenAddress: string = ETHEREUM_SEPOLIA_CCIP_LMN_TOKEN // Using LINK token for CCIP LMN
-	const usdcTokenAddress: string = ETHEREUM_SEPOLIA__USDC_TOKEN // Using LINK token for USDC
+	const ccipLnmTokenAddress: string = ETHEREUM_SEPOLIA_CCIP_LMN_TOKEN // Using LINK token for CCIP LMN
+	const usdcTokenAddress: string = ETHEREUM_SEPOLIA_USDC_TOKEN // Using LINK token for USDC
 	const avalancheFujiSelector: bigint =
 		AVALANCHE_FUJI_CCIP_DESTION_CHAIN_SELECTOR
 
@@ -59,12 +60,12 @@ const deployZkDao: DeployFunction = async function (
 	}
 
 	const ccipParams = {
-		linkTokenAddress,
-		ccipRouterAddress,
+		linkToken: linkTokenAddress,
+		ccipRouter: ccipRouterAddress,
 		ccipBnmToken: ccipBnmTokenAddress,
-		ccipLmnToken: ccipLmnTokenAddress,
+		ccipLnmToken: ccipLnmTokenAddress,
 		usdcToken: usdcTokenAddress,
-		avalancheFujiSelector: avalancheFujiSelector
+		destinationChainSelector: avalancheFujiSelector
 	}
 
 	const args = [

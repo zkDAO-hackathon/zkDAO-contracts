@@ -192,6 +192,14 @@ contract Governor is
 		cids[_proposalId] = _cid;
 	}
 
+	function transferTokensPayLINK(
+		address _receiver,
+		address _token,
+		uint256 _amount
+	) external {
+		zkDao.transferTokensPayLINK(_receiver, _token, _amount);
+	}
+
 	/// =============================
 	/// ===== Override Functions ====
 	/// =============================

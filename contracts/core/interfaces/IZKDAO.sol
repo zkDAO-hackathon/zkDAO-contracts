@@ -134,4 +134,10 @@ interface IZKDAO {
 		uint256 proposalBlock,
 		address voteToken
 	) external;
+
+	function transferTokensPayLINK(
+		address _receiver,
+		address _token,
+		uint256 _amount
+	) external returns (bytes32 messageId);
 }
