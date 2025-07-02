@@ -1,8 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
-import { stringToHex } from 'viem'
 
-import { developmentChains, networkConfig } from '@/config/const'
+import {
+	developmentChains,
+	GOVERNOR_DETERMINISTIC_DEPLOYMENT,
+	networkConfig
+} from '@/config/const'
 import { verify } from '@/utils/verify'
 
 const deployGovernor: DeployFunction = async function (
@@ -20,7 +23,7 @@ const deployGovernor: DeployFunction = async function (
 	const deterministic = await deployments.deterministic('Governor', {
 		from: deployer,
 		args,
-		deterministicDeployment: stringToHex('governor-v1'),
+		salt: GOVERNOR_DETERMINISTIC_DEPLOYMENT,
 		contract: 'Governor',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
@@ -42,4 +45,4 @@ const deployGovernor: DeployFunction = async function (
 }
 
 export default deployGovernor
-deployGovernor.tags = ['avalancheFuji', 'af-deploy', 'af-governor']
+deployGovernor.tags = ['deploy', 'governor']

@@ -1,8 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
-import { stringToHex } from 'viem'
 
-import { developmentChains, networkConfig } from '@/config/const'
+import {
+	developmentChains,
+	networkConfig,
+	VERIFIER_DETERMINISTIC_DEPLOYMENT
+} from '@/config/const'
 import { verify } from '@/utils/verify'
 
 const deployVerifier: DeployFunction = async function (
@@ -20,7 +23,7 @@ const deployVerifier: DeployFunction = async function (
 	const deterministic = await deployments.deterministic('HonkVerifier', {
 		from: deployer,
 		args,
-		deterministicDeployment: stringToHex('verifier-v1'),
+		salt: VERIFIER_DETERMINISTIC_DEPLOYMENT,
 		contract: 'HonkVerifier',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
@@ -42,4 +45,4 @@ const deployVerifier: DeployFunction = async function (
 }
 
 export default deployVerifier
-deployVerifier.tags = ['avalancheFuji', 'af-deploy', 'af-verifier']
+deployVerifier.tags = ['deploy', 'verifier']

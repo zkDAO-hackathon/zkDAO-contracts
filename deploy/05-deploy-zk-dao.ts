@@ -1,19 +1,18 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
-import { parseEther } from 'viem'
 
 import {
-	AVALANCHE_FUJI_CCIP_BNM_TOKEN,
-	AVALANCHE_FUJI_CCIP_LMN_TOKEN,
-	AVALANCHE_FUJI_CCIP_ROUTER,
-	AVALANCHE_FUJI_DON_ID,
-	AVALANCHE_FUJI_FUNCTIONS_ROUTER,
-	AVALANCHE_FUJI_LINK_TOKEN,
-	AVALANCHE_FUJI_SUBSCRIPTION_ID,
-	AVALANCHE_FUJI_USDC_TOKEN,
+	CCIP_BNM_TOKEN,
+	CCIP_DESTION_CHAIN_SELECTOR,
+	CCIP_LMN_TOKEN,
+	CCIP_ROUTER,
+	CCIP_USDC_TOKEN,
 	developmentChains,
-	ETHEREUM_SEPOLIA_CCIP_DESTION_CHAIN_SELECTOR,
+	FUNCTION_DON_ID,
+	FUNCTIONS_ROUTER,
+	FUNCTIONS_SUBSCRIPTION_ID,
 	GAS_LIMIT,
+	LINK_TOKEN,
 	networkConfig,
 	SOURCE
 } from '@/config/const'
@@ -25,6 +24,8 @@ const deployZkDao: DeployFunction = async function (
 	const { getNamedAccounts, deployments, network } = hre
 	const { deploy, log, get, save } = deployments
 	const { deployer, factory } = await getNamedAccounts()
+
+	const chain = network.name
 
 	const governorToken = await get('GovernorToken')
 	const timeLock = await get('TimeLock')
@@ -39,18 +40,17 @@ const deployZkDao: DeployFunction = async function (
 	const governorAddress: string = governor.address
 	const verifierAddress: string = verifier.address
 
-	const linkTokenAddress: string = AVALANCHE_FUJI_LINK_TOKEN
-	const ccipRouterAddress: string = AVALANCHE_FUJI_CCIP_ROUTER // Using the same address for Functions Router
-	const ccipBnmTokenAddress: string = AVALANCHE_FUJI_CCIP_BNM_TOKEN // Using LINK token for CCIP BNM
-	const ccipLnmTokenAddress: string = AVALANCHE_FUJI_CCIP_LMN_TOKEN // Using LINK token for CCIP LMN
-	const usdcTokenAddress: string = AVALANCHE_FUJI_USDC_TOKEN // Using LINK token for USDC
-	const avalancheFujiSelector: bigint =
-		ETHEREUM_SEPOLIA_CCIP_DESTION_CHAIN_SELECTOR
+	const linkTokenAddress: string = LINK_TOKEN(chain)
+	const ccipRouterAddress: string = CCIP_ROUTER(chain)
+	const ccipBnmTokenAddress: string = CCIP_BNM_TOKEN(chain)
+	const ccipLnmTokenAddress: string = CCIP_LMN_TOKEN(chain)
+	const usdcTokenAddress: string = CCIP_USDC_TOKEN(chain)
+	const destinationChainSelector: bigint = CCIP_DESTION_CHAIN_SELECTOR(chain)
 
-	const functionsRouterAddress: string = AVALANCHE_FUJI_FUNCTIONS_ROUTER
-	const subscriptionId: bigint = AVALANCHE_FUJI_SUBSCRIPTION_ID
+	const functionsRouterAddress: string = FUNCTIONS_ROUTER(chain)
+	const subscriptionId: bigint = FUNCTIONS_SUBSCRIPTION_ID(chain)
 	const gasLimit: bigint = GAS_LIMIT
-	const donId: string = AVALANCHE_FUJI_DON_ID
+	const donId: string = FUNCTION_DON_ID(chain)
 	const source: string = SOURCE
 
 	const implementation = {
@@ -66,7 +66,7 @@ const deployZkDao: DeployFunction = async function (
 		ccipBnmToken: ccipBnmTokenAddress,
 		ccipLnmToken: ccipLnmTokenAddress,
 		usdcToken: usdcTokenAddress,
-		destinationChainSelector: avalancheFujiSelector
+		destinationChainSelector: destinationChainSelector
 	}
 
 	const args = [
@@ -91,7 +91,7 @@ const deployZkDao: DeployFunction = async function (
 	log(`ZKDAO contract at ${zkDao.address}`)
 
 	if (!developmentChains.includes(network.name)) {
-		await verify(verifier.address, args)
+		await verify(zkDao.address, args)
 	}
 
 	const artifact = await deployments.getExtendedArtifact('ZKDAO')
@@ -100,19 +100,19 @@ const deployZkDao: DeployFunction = async function (
 		...artifact
 	})
 
-	log('----------------------------------------------------')
-	log('Funding factory wallet with NATIVE token...')
+	// log('----------------------------------------------------')
+	// log('Funding factory wallet with NATIVE token...')
 
-	const wallet = await hre.viem.getWalletClient(deployer)
+	// const wallet = await hre.viem.getWalletClient(deployer)
 
-	const transferNativeTokenTx = await wallet.sendTransaction({
-		account: deployer,
-		to: factory,
-		value: parseEther('0.1') // 0.01 ETH
-	})
+	// const transferNativeTokenTx = await wallet.sendTransaction({
+	// 	account: deployer,
+	// 	to: factory,
+	// 	value: parseEther('0.1') // 0.01 ETH
+	// })
 
-	log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
+	// log(`Factory wallet funded with NATIVE token: ${transferNativeTokenTx}`)
 }
 
 export default deployZkDao
-deployZkDao.tags = ['avalancheFuji', 'af-deploy', 'af-ZKDAO']
+deployZkDao.tags = ['deploy', 'zkdao']
