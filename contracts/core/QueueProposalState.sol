@@ -4,9 +4,12 @@ pragma solidity ^0.8.28;
 import {AutomationCompatibleInterface} from '@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol';
 
 import {IGovernor} from '../core/interfaces/IGovernor.sol';
-import {Consumer} from './Consumer.sol';
+import {ConsumerUpgradable} from '../core/upgradable/ConsumerUpgradable.sol';
 
-contract QueueProposalState is AutomationCompatibleInterface, Consumer {
+contract QueueProposalState is
+	AutomationCompatibleInterface,
+	ConsumerUpgradable
+{
 	/// ======================
 	/// ======= Events =======
 	/// ======================
@@ -29,18 +32,6 @@ contract QueueProposalState is AutomationCompatibleInterface, Consumer {
 		address voteToken,
 		string[] args
 	);
-
-	/// =========================
-	/// ====== Constructor ======
-	/// =========================
-
-	constructor(
-		address _router,
-		uint64 _subscriptionId,
-		uint32 _gasLimit,
-		bytes32 _donID,
-		string memory _source
-	) Consumer(_router, _subscriptionId, _gasLimit, _donID, _source) {}
 
 	/// ==========================
 	/// === External Functions ===

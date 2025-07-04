@@ -45,4 +45,4 @@ const deployTimeLock: DeployFunction = async function (
 }
 
 export default deployTimeLock
-deployTimeLock.tags = ['deploy', 'timelock']
+deployTimeLock.tags = ['all', 'timelock']

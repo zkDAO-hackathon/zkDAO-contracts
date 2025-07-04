@@ -45,4 +45,4 @@ const deployVerifier: DeployFunction = async function (
 }
 
 export default deployVerifier
-deployVerifier.tags = ['deploy', 'verifier']
+deployVerifier.tags = ['all', 'verifier']

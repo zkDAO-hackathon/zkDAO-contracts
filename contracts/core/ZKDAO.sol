@@ -24,7 +24,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 	/// ======= Errors =======
 	/// ======================
 
-	error NotEnoughBalance(uint256 currentBalance, uint256 calculatedFees);
+	error NotEnoughBalance(uint256 currentBalance, uint256 calculatedfee);
 	error NothingToWithdraw();
 	error FailedToWithdrawEth(address owner, address target, uint256 value);
 	error DestinationChainNotAllowlisted(uint64 destinationChainSelector);
@@ -59,7 +59,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 		address token,
 		uint256 tokenAmount,
 		address feeToken,
-		uint256 fees
+		uint256 fee
 	);
 
 	/// ======================
@@ -113,7 +113,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 	/// === Storage Variables ===
 	/// =========================
 
-	uint256 private price = 5 ether; // Price to create a DAO in LINK tokens
+	uint256 private price = 0.000001 ether; // Price to create a DAO in LINK tokens
 	uint256 private daoCounter;
 
 	IGovernorToken private governorToken;
@@ -135,7 +135,11 @@ contract ZKDAO is QueueProposalState, Transfer {
 
 	receive() external payable {}
 
-	constructor(
+	/// =========================
+	/// ====== Initializer ======
+	/// =========================
+
+	function initialize(
 		Implementations memory _implementations,
 		CcipParams memory _ccipParams,
 		address _factory,
@@ -144,15 +148,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 		uint32 _gasLimit,
 		bytes32 _donID,
 		string memory _source
-	)
-		QueueProposalState(
-			_functionsRouter,
-			_subscriptionId,
-			_gasLimit,
-			_donID,
-			_source
-		)
-	{
+	) external {
 		governorToken = IGovernorToken(_implementations.governorToken);
 		timelock = ITimeLock(_implementations.timelock);
 		governor = IGovernor(_implementations.governor);
@@ -161,6 +157,14 @@ contract ZKDAO is QueueProposalState, Transfer {
 		ccipRouter = IRouterClient(_ccipParams.ccipRouter);
 		destinationChainSelector = _ccipParams.destinationChainSelector;
 		factory = _factory;
+
+		__ConsumerUpgradable_init(
+			_functionsRouter,
+			_subscriptionId,
+			_gasLimit,
+			_donID,
+			_source
+		);
 	}
 
 	/// =========================
@@ -278,6 +282,18 @@ contract ZKDAO is QueueProposalState, Transfer {
 		return daos[id];
 	}
 
+	function getCcipFee(
+		address _receiver,
+		address _token,
+		uint256 _amount
+	) external view returns (uint256) {
+		return
+			ccipRouter.getFee(
+				destinationChainSelector,
+				_buildCCIPMessage(_receiver, _token, _amount, address(linkToken))
+			);
+	}
+
 	function getTreasury() external view returns (uint256) {
 		return address(this).balance;
 	}
@@ -376,6 +392,9 @@ contract ZKDAO is QueueProposalState, Transfer {
 		IGovernorToken(tokenClone).mintBatch(_to, _amounts);
 		IGovernorToken(tokenClone).transferOwnership(timelockClone);
 
+		linkToken.approve(address(this), price);
+		linkToken.transfer(address(governorClone), price);
+
 		daoIdByTimelock[timelockClone] = id;
 		daoIdByAddress[governorClone] = id;
 		daos[id] = Dao({
@@ -430,10 +449,11 @@ contract ZKDAO is QueueProposalState, Transfer {
 		allowlistedChains[_destinationChainSelector] = allowed;
 	}
 
-	function transferTokensPayLINK(
+	function transferCrosschain(
 		address _receiver,
 		address _token,
-		uint256 _amount
+		uint256 _amount,
+		uint256 _fee
 	)
 		external
 		onlyTimelock
@@ -447,12 +467,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 			address(linkToken)
 		);
 
-		uint256 fees = ccipRouter.getFee(destinationChainSelector, evm2AnyMessage);
-
-		if (fees > linkToken.balanceOf(address(this)))
-			revert NotEnoughBalance(linkToken.balanceOf(address(this)), fees);
-
-		linkToken.approve(address(ccipRouter), fees);
+		linkToken.approve(address(ccipRouter), _fee);
 
 		IERC20(_token).approve(address(ccipRouter), _amount);
 
@@ -465,7 +480,7 @@ contract ZKDAO is QueueProposalState, Transfer {
 			_token,
 			_amount,
 			address(linkToken),
-			fees
+			_fee
 		);
 
 		return messageId;
@@ -529,7 +544,11 @@ contract ZKDAO is QueueProposalState, Transfer {
 				logo: governorParams.logo
 			});
 
-		IGovernor(_governorClone).initialize(memoryParams, _verifier);
+		IGovernor(_governorClone).initialize(
+			memoryParams,
+			_verifier,
+			address(linkToken)
+		);
 	}
 
 	function _buildCCIPMessage(

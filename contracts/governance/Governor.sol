@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {GovernorUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/GovernorUpgradeable.sol';
 import {GovernorCountingSimpleUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/extensions/GovernorCountingSimpleUpgradeable.sol';
 import {GovernorSettingsUpgradeable} from '@openzeppelin/contracts-upgradeable/governance/extensions/GovernorSettingsUpgradeable.sol';
@@ -25,15 +26,77 @@ contract Governor is
 	GovernorVotesUpgradeable,
 	GovernorVotesQuorumFractionUpgradeable,
 	GovernorTimelockControlUpgradeable,
-	IGovernor,
 	Errors
 {
+	/// ======================
+	/// ======= Structs ======
+	/// ======================
+
+	struct GovernorInitParams {
+		string name;
+		IVotes token;
+		TimelockControllerUpgradeable timelock;
+		uint48 votingDelay;
+		uint32 votingPeriod;
+		uint256 proposalThreshold;
+		uint256 votesQuorumFraction;
+		uint256 id;
+		string description;
+		string logo;
+	}
+
+	struct PublicInputs {
+		uint256 proposalId;
+		uint256 weight;
+		uint8 choice;
+		bytes32 root;
+		uint256 nullifier;
+	}
+
+	struct ZKProposalVote {
+		uint256 againstVotes;
+		uint256 forVotes;
+		uint256 abstainVotes;
+		// NOTE: the mapping is not necessary for the current implementation
+		// mapping(uint256 => bool) hasNullified;
+	}
+
+	struct ProposalStorage {
+		uint256 id;
+		uint256 proposalNumber;
+		uint256 createdAt;
+		address proposer;
+		string description;
+	}
+
+	/// ======================
+	/// ======= Events =======
+	/// ======================
+
+	event ZKVoteCast(
+		uint256 indexed proposalId,
+		uint8 choice,
+		uint256 weight,
+		bytes32 nullifier
+	);
+
+	event TokensTransferred(
+		bytes32 indexed messageId,
+		uint64 indexed destinationChainSelector,
+		address receiver,
+		address token,
+		uint256 tokenAmount,
+		address feeToken,
+		uint256 fees
+	);
+
 	/// =========================
 	/// === Storage Variables ===
 	/// =========================
 
 	uint256 private proposalCounter;
 	uint256 private id;
+	address private linkToken;
 	IVerifier private verifier;
 	IZKDAO private zkDao;
 	string private description;
@@ -67,7 +130,8 @@ contract Governor is
 
 	function initialize(
 		GovernorInitParams calldata params,
-		IVerifier _verifier
+		IVerifier _verifier,
+		address _linkToken
 	) public initializer {
 		__Governor_init(params.name);
 		__GovernorSettings_init(
@@ -85,6 +149,7 @@ contract Governor is
 		zkDao = IZKDAO(payable(msg.sender));
 		description = params.description;
 		logo = params.logo;
+		linkToken = _linkToken;
 	}
 
 	/// ==========================
@@ -126,7 +191,6 @@ contract Governor is
 	)
 		external
 		view
-		override
 		returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)
 	{
 		ZKProposalVote storage p = zkVotes[_id];
@@ -136,11 +200,11 @@ contract Governor is
 	function getNullifierUsed(
 		uint256 _id,
 		uint256 nullifier
-	) external view override returns (bool) {
+	) external view returns (bool) {
 		return nullifierUsed[_id][nullifier];
 	}
 
-	function getCid(uint256 _id) external view override returns (string memory) {
+	function getCid(uint256 _id) external view returns (string memory) {
 		return cids[_id];
 	}
 
@@ -155,7 +219,7 @@ contract Governor is
 		return leftTime;
 	}
 
-	function isWaitingMerkle(uint256 _id) public view override returns (bool) {
+	function isWaitingMerkle(uint256 _id) public view returns (bool) {
 		return
 			super.state(_id) == ProposalState.Pending && bytes(cids[_id]).length == 0;
 	}
@@ -185,19 +249,37 @@ contract Governor is
 		emit ZKVoteCast(_proposalId, uint8(choice), weight, _inputs[0]);
 	}
 
-	function setRoot(
-		uint256 _proposalId,
-		string memory _cid
-	) external override onlyZKDAO {
+	function setRoot(uint256 _proposalId, string memory _cid) external onlyZKDAO {
 		cids[_proposalId] = _cid;
 	}
 
-	function transferTokensPayLINK(
+	function transferCrosschainTreasury(
 		address _receiver,
 		address _token,
 		uint256 _amount
-	) external {
-		zkDao.transferTokensPayLINK(_receiver, _token, _amount);
+	) external returns (bytes32) {
+		uint256 fee = zkDao.getCcipFee(_receiver, _token, _amount);
+
+		if (IERC20(linkToken).balanceOf(address(this)) < fee) {
+			revert INSUFFICIENT_FUNDS();
+		}
+
+		if (IERC20(linkToken).allowance(address(this), address(zkDao)) < fee) {
+			IERC20(linkToken).approve(address(zkDao), type(uint256).max);
+		}
+
+		IERC20(linkToken).transfer(address(zkDao), fee);
+
+		if (IERC20(_token).balanceOf(address(this)) < _amount) {
+			revert INSUFFICIENT_FUNDS();
+		}
+
+		if (IERC20(_token).allowance(address(this), address(zkDao)) < _amount) {
+			IERC20(_token).approve(address(zkDao), type(uint256).max);
+		}
+
+		IERC20(_token).transfer(address(zkDao), _amount);
+		return zkDao.transferCrosschain(_receiver, _token, _amount);
 	}
 
 	/// =============================
@@ -259,7 +341,7 @@ contract Governor is
 		uint256[] memory values,
 		bytes[] memory calldatas,
 		string memory _description
-	) public override(GovernorUpgradeable, IGovernor) returns (uint256) {
+	) public override(GovernorUpgradeable) returns (uint256) {
 		address proposer = _msgSender();
 
 		if (!_isValidDescriptionForProposer(proposer, _description)) {

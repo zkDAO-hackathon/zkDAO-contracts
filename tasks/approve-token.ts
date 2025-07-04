@@ -1,5 +1,6 @@
 import { task } from 'hardhat/config'
 import { Address } from 'viem'
+import { estimateFeesPerGas } from 'viem/actions'
 
 import { LINK_TOKEN, PRICE } from '@/config/const'
 
@@ -19,6 +20,8 @@ task(
 
 		const publicClient = await viem.getPublicClient()
 
+		const fees = await estimateFeesPerGas(publicClient)
+
 		const { address: zkdaoAddress } = await deployments.get('ZKDAO')
 
 		const link = await viem.getContractAt('IERC20', LINK_TOKEN(chain))
@@ -27,7 +30,9 @@ task(
 		console.log(`🔓 Approving ${PRICE} LINK to ZKDAO at ${zkdaoAddress}...`)
 
 		const approveTx = await link.write.approve([zkdaoAddress, PRICE], {
-			account: deployer as Address
+			account: deployer as Address,
+			maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+			maxFeePerGas: fees.maxFeePerGas
 		})
 
 		await publicClient.waitForTransactionReceipt({ hash: approveTx })

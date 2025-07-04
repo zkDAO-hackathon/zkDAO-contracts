@@ -32,14 +32,20 @@ task('queue', 'Queue a proposal to give tokens to an user').setAction(
 		console.log('----------------------------------------------------')
 		console.log(`🏁 ${user1} Moving proposal ${proposal.id} to queue`)
 
+		const fee = await zkdao.read.getCcipFee(
+			[factory as Address, CCIP_BNM_TOKEN(chain), BigInt(AMOUNT)],
+			{ account: user1 }
+		)
+
 		const targets = [zkdaoAddress]
 		const values = [0n]
 
 		const transferCallData = encodeFunctionData({
 			abi: zkdao.abi,
-			functionName: 'transferTokensPayLINK',
-			args: [factory as Address, CCIP_BNM_TOKEN(chain), BigInt(AMOUNT)]
+			functionName: 'transferCrosschain',
+			args: [factory as Address, CCIP_BNM_TOKEN(chain), BigInt(AMOUNT), fee]
 		})
+
 		const calldatas = [transferCallData]
 
 		const description = `Cross-chain transfer ${AMOUNT} tokens to ${factory} via CCIP`

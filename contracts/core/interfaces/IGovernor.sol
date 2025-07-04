@@ -79,7 +79,8 @@ interface IGovernor {
 	 */
 	function initialize(
 		GovernorInitParams calldata params,
-		IVerifier _verifier
+		IVerifier _verifier,
+		address _linkToken
 	) external;
 
 	/// ==========================

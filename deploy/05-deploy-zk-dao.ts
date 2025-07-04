@@ -1,3 +1,4 @@
+import { viem } from 'hardhat'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 
@@ -8,13 +9,14 @@ import {
 	CCIP_ROUTER,
 	CCIP_USDC_TOKEN,
 	developmentChains,
-	FUNCTION_DON_ID,
+	FUNCTIONS_DON_ID,
 	FUNCTIONS_ROUTER,
 	FUNCTIONS_SUBSCRIPTION_ID,
 	GAS_LIMIT,
 	LINK_TOKEN,
 	networkConfig,
-	SOURCE
+	SOURCE,
+	ZKDAO_DETERMINISTIC_DEPLOYMENT
 } from '@/config/const'
 import { verify } from '@/utils/verify'
 
@@ -35,6 +37,8 @@ const deployZkDao: DeployFunction = async function (
 	log('----------------------------------------------------')
 	log('Deploying ZKDAO and waiting for confirmations...')
 
+	const publicClient = await viem.getPublicClient()
+
 	const governorTokenAddress: string = governorToken.address
 	const timeLockAddress: string = timeLock.address
 	const governorAddress: string = governor.address
@@ -50,7 +54,7 @@ const deployZkDao: DeployFunction = async function (
 	const functionsRouterAddress: string = FUNCTIONS_ROUTER(chain)
 	const subscriptionId: bigint = FUNCTIONS_SUBSCRIPTION_ID(chain)
 	const gasLimit: bigint = GAS_LIMIT
-	const donId: string = FUNCTION_DON_ID(chain)
+	const donId: string = FUNCTIONS_DON_ID(chain)
 	const source: string = SOURCE
 
 	const implementation = {
@@ -69,7 +73,7 @@ const deployZkDao: DeployFunction = async function (
 		destinationChainSelector: destinationChainSelector
 	}
 
-	const args = [
+	const initializationParams = {
 		implementation,
 		ccipParams,
 		factory,
@@ -78,15 +82,20 @@ const deployZkDao: DeployFunction = async function (
 		gasLimit,
 		donId,
 		source
-	]
+	}
 
-	const zkDao = await deploy('ZKDAO', {
+	const args: string[] = []
+
+	const deterministic = await deployments.deterministic('ZKDAO', {
 		from: deployer,
 		args,
+		salt: ZKDAO_DETERMINISTIC_DEPLOYMENT,
 		contract: 'ZKDAO',
 		log: true,
 		waitConfirmations: networkConfig[network.name].blockConfirmations || 1
 	})
+
+	const zkDao = await deterministic.deploy()
 
 	log(`ZKDAO contract at ${zkDao.address}`)
 
@@ -99,6 +108,31 @@ const deployZkDao: DeployFunction = async function (
 		address: zkDao.address,
 		...artifact
 	})
+
+	log('----------------------------------------------------')
+	log('Initializing ZKDAO...')
+
+	const zkDaoContract = await viem.getContractAt('ZKDAO', zkDao.address)
+
+	const initializeTx = await zkDaoContract.write.initialize(
+		[
+			initializationParams.implementation,
+			initializationParams.ccipParams,
+			initializationParams.factory,
+			initializationParams.functionsRouterAddress,
+			initializationParams.subscriptionId,
+			initializationParams.gasLimit,
+			initializationParams.donId,
+			initializationParams.source
+		],
+		{
+			account: deployer
+		}
+	)
+
+	await publicClient.waitForTransactionReceipt({ hash: initializeTx })
+
+	log(`ZKDAO initialized. tx hash: ${initializeTx}`)
 
 	// log('----------------------------------------------------')
 	// log('Funding factory wallet with NATIVE token...')
@@ -115,4 +149,4 @@ const deployZkDao: DeployFunction = async function (
 }
 
 export default deployZkDao
-deployZkDao.tags = ['deploy', 'zkdao']
+deployZkDao.tags = ['all', 'zkdao']

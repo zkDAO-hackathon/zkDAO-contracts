@@ -89,6 +89,12 @@ interface IZKDAO {
 	 */
 	function getNonce(address account) external view returns (uint256);
 
+	function getCcipFee(
+		address _receiver,
+		address _token,
+		uint256 _amount
+	) external view returns (uint256);
+
 	/// =================================
 	/// == External / Public Functions ==
 	/// =================================
@@ -135,7 +141,7 @@ interface IZKDAO {
 		address voteToken
 	) external;
 
-	function transferTokensPayLINK(
+	function transferCrosschain(
 		address _receiver,
 		address _token,
 		uint256 _amount

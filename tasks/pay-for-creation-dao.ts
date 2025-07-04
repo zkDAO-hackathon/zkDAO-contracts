@@ -1,5 +1,6 @@
 import { task } from 'hardhat/config'
 import { Address } from 'viem'
+import { estimateFeesPerGas } from 'viem/actions'
 
 import {
 	AMOUNTS,
@@ -28,9 +29,15 @@ task('pay-for-dao-creation', 'Create a DAO').setAction(async (_, hre) => {
 		console.log('----------------------------------------------------')
 		console.log('🏗️  Paying to create DAO...')
 
+		const fees = await estimateFeesPerGas(publicClient)
+
 		const payForDaoCreationTx = await zkdao.write.payForDaoCreation(
 			[GOVERNOR_TOKEN_PARAMS, MIN_DELAY, GOVERNOR_PARAMS, TO, AMOUNTS, PRICE],
-			{ account: deployer as Address }
+			{
+				account: deployer as Address,
+				maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+				maxFeePerGas: fees.maxFeePerGas
+			}
 		)
 
 		await publicClient.waitForTransactionReceipt({ hash: payForDaoCreationTx })

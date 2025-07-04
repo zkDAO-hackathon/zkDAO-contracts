@@ -29,13 +29,18 @@ task(
 	console.log('----------------------------------------------------')
 	console.log(`🌉 ${user1} proposes to transfer ${AMOUNT} tokens to ${factory}`)
 
+	const fee = await zkdao.read.getCcipFee(
+		[factory as Address, CCIP_BNM_TOKEN(chain), BigInt(AMOUNT)],
+		{ account: user1 }
+	)
+
 	const targets = [zkdaoAddress]
 	const values = [0n]
 
 	const transferCallData = encodeFunctionData({
 		abi: zkdao.abi,
-		functionName: 'transferTokensPayLINK',
-		args: [factory as Address, CCIP_BNM_TOKEN(chain), BigInt(AMOUNT)]
+		functionName: 'transferCrosschain',
+		args: [factory as Address, CCIP_BNM_TOKEN(chain), BigInt(AMOUNT), fee]
 	})
 
 	const calldatas = [transferCallData]

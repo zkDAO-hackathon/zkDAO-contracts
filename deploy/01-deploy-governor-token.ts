@@ -45,4 +45,4 @@ const deployGovernorToken: DeployFunction = async function (
 }
 
 export default deployGovernorToken
-deployGovernorToken.tags = ['deploy', 'governorToken']
+deployGovernorToken.tags = ['all', 'governorToken']
